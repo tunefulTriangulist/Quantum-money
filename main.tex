@@ -1,0 +1,547 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[pdftex]{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{braket}
+\usepackage{graphicx}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\usepackage{multirow}
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+    citecolor=black,
+}
+
+\newcommand{\stamp}{\vcenter{\hbox{\includegraphics[height=1em]{rubberstamp}}}}
+
+\begin{document}
+
+\section{Definitions}
+\textbf{\textit{Non-collapsing hash function.}} A hash function that is collision-resistant and not infinitely-often collapsing. (See \cite{zha17} for definitions of `collision-resistant' and `infinitely-often collapsing'. We can assume that there are adversaries who win the collapsing game for such functions with probability near 1. See \cite{gyz}, \cite{zha17} for examples of how one can boost the success probability of any bad adversary who breaks infinitely-often collapsing security so that it becomes a very good adversary.) \\
+
+\noindent \textbf{\textit{Part-probabilistic non-collapsing hash function.}} A function $F(k, x, r)$ whose output takes the form $H(k, x) \: || \: R( H(k, x), r)$, where $H$ is a (deterministic) collision-resistant hash function, and $R$ is another function whose output is permitted to depend upon the randomness $r$ and the output of $H$. We require the following security properties of $F$:
+
+\begin{enumerate}
+    \item Collision resistance for $H$: For any quantum polynomial time adversary $A$,
+    \begin{center}
+        Pr[$H(k, x_0) = H(k, x_1) \wedge x_0 \neq x_1 \: : \: (x_0, x_1) \leftarrow A(k), k \leftarrow \{0, 1\}^\lambda$] $< \textsf{negl}(\lambda)$
+    \end{center}
+    \item (Infinitely-often) non-collapsing: There exists an adversary $A$ (consisting of two phases, $A_0$ and $A_1$) who can win the following game with probability $1-\gamma$, where $\gamma$ is negligible.
+    \begin{itemize}
+        \item The challenger has an input bit $b$.
+        \item The challenger chooses a random key $k$, which it gives to $A_0$.
+        \item $A_0$ creates a superposition $\ket{\psi} = \sum_x \alpha_x \ket{x}$ and submits this state to the challenger.
+        \item The challenger generates a random $r$. It evaluates $F(k, \cdot, r)$ in superposition on $\ket{\psi}$, to get the state $\sum_x \alpha_x \ket{x, H(k, x), R(H(k, x), r)}$.
+        \item The challenger does one of the following:
+        \begin{itemize}
+            \item If $b = 0$, it measures the last two registers, and returns the state $\sum_{x : H(k, x) = y} \alpha_x \ket{x, y, R(y, r)}$ to $A$.
+            \item If $b = 1$, it measures the entire state, and returns the state $\ket{x_0, y, R(y, r)}$ (for some $x_0$) to $A$.
+        \end{itemize}
+        \item $A_1$ outputs a guess for $b$. If $A_1$ is correct, $A$ wins the game.
+    \end{itemize}
+\end{enumerate}
+
+Note that, under this definition of `non-collapsing' (which mimics \cite{zha17}'s definition), the distinguisher $A_1$ is only guaranteed to exist \textit{if the challenger behaves honestly}. $A_1$'s success may depend upon $r$ being honestly generated, and upon $R$ being honestly run; it has no way of verifying that either is the case. In the generic hash function setting, we cannot guarantee that $R$ will be run honestly on a random $r$, and we cannot guarantee that the distinguisher $A_1$ which wins the game above will still be useful if this is not the case.
+
+It is evident that the (deterministic) non-collapsing hash function is a special case of the part-probabilistic non-collapsing hash function, so that any NCH function is also a PP-NCH function.\\
+
+\noindent \textbf{\textit{Chosen-y-secure hash function.}} A hash function $H(k, x)$ for which no quantum polynomial time adversary can win the following game with more than negligible probability:
+\begin{itemize}
+    \item The challenger chooses a random key $k$, which it gives to $A$.
+    \item The challenger creates a uniform superposition over all inputs $x$ in the input space of $H$, and evaluates $H(k, \cdot)$ upon this superposition to obtain the state $\sum_x \alpha_x \ket{x, H(k, x)}$. It then measures the output register to obtain a state $\ket{\psi_y} = \sum_{x : H(k, x) = y} \alpha_x \ket{x, y}$ for some random $y$.
+    \item The challenger gives $\ket{\psi_y}$ to the adversary. The adversary wins the game if it can recover $x_0, x_1$ such that $H(k, x_0) = H(k, x_1) = y$.
+\end{itemize}
+
+The collapsing security game can be defined in the same way for CYS hash functions that it is for collision-resistant hash functions.
+
+Note that it is easy to construct a collision-resistance adversary from a chosen-$y$ adversary, and that, therefore, any collision-resistant hash function is also a chosen-$y$-secure hash function. This notion of `chosen $y$' security is close to that of second preimage resistance security; the former can be considered a strengthening of the latter to suit the quantum setting.
+
+Note, in addition, that any PP-NCH function can be transformed into a CYS-NCH function. Chosen-$y$ security follows directly from the assumption of collision resistance for the deterministic part of the PP-NCH function. The non-collapsing property, meanwhile, follows from the fact that the chosen-$y$ setting already demands that $y$ is chosen randomly (presumably by some trusted party) if the CYS function's preimage security is to hold. Any construction using a chosen-$y$ hash function for its preimage security properties, therefore, must generate honest randomness when it generates $y$; and, as such, $y$ can be used as a source of randomness for the randomised part of the PP-NCH function.
+
+
+\section{NCH implies BZ-GYZ}
+
+\textbf{Claim.} Any non-collapsing hash function can be used to build a one-time signature scheme that is Boneh-Zhandry secure but not Garg-Yuen-Zhandry secure. \\
+
+\noindent \textit{Scheme.} Given a non-collapsing hash function $F$, and an arbitrary BZ-secure one-time signature scheme $\mathsf{(Gen_{BZ}, Sign_{BZ}, Ver_{BZ})}$ (these are easy to produce; for example, the standard Lamport construction of a one-time signature scheme from a collision-resistant hash function is BZ-secure, according to \cite{BZ13b}), we construct a BZ-GYZ scheme $\mathsf{(Gen, Sign, Ver)}$ as follows.
+
+\begin{itemize}
+    \item \textsf{Gen} simply runs $\mathsf{Gen_{BZ}}$ to generate a pair of keys $\mathsf{(pk, sk)}$ for the BZ signature scheme.
+    \item $\mathsf{Sign(sk}, m\mathsf{)} = F(m) \: \Vert \: \mathsf{Sign_{BZ}(sk}, F(m)\mathsf{)} = \sigma$. In other words, \textsf{Sign} applies the non-collapsing hash function $F$ to the message, signs the hashed message using the BZ scheme, and outputs the hashed message concatenated with the signature it obtains from the BZ signing oracle.
+    \item $\mathsf{Ver(pk}, m, \sigma \mathsf{)}$ firstly hashes the message $m$ to obtain $F(m)$, and then verifies $F(m)$ using $\mathsf{Ver_{BZ}}$ and $\mathsf{pk}$.
+\end{itemize}
+
+\noindent \textit{Proof.} We firstly prove that this scheme is BZ-secure, assuming that $\mathsf{(Gen_{BZ}, Sign_{BZ}, Ver_{BZ})}$ is BZ-secure.
+
+Suppose we have some adversary $A$ who is able to break the BZ-security of $\mathsf{(Gen, Sign, Ver)}$. The adversary $B$ can then use $A$ to break the BZ-security of $\mathsf{(Gen_{BZ}, Sign_{BZ}, Ver_{BZ})}$ as follows:
+
+\begin{itemize}
+    \item $B$ receives \textsf{pk} from its challenger. It passes \textsf{pk} on to $A$.
+    \item $A$ creates a superposition of messages $\sum_m \alpha_m | m \rangle$ and gives it to $B$ as a query. $B$ computes $F$ on it in superposition, and then passes $\sum_m \alpha_m | m, F(m) \rangle$ on to its challenger, who computes $\mathsf{Sign_{BZ}}$ on it and returns the state $\sum_m \alpha_m | \: m, F(m), \mathsf{Sign_{BZ}(sk}, F(m)) \: \rangle$ to $B$. $B$ gives this state to $A$.
+    \item $A$ outputs its (classical) forgery for $\mathsf{(Gen, Sign, Ver)}$. This forgery will take the form \\ $((m_0, F(m_0), \sigma_0), (m_1, F(m_1), \sigma_1))$, where $m_0$ and $m_1$ are two distinct messages.
+    \item If $F(m_0) = F(m_1)$, then we have found a collision for $F$, which ought to be impossible, because we assume that $F$, a non-collapsing hash function, is collision-resistant. If $F(m_0) \neq F(m_1)$, then $B$ outputs $((F(m_0), \sigma_0), (F(m_1), \sigma_1))$ as its forgery for the $\mathsf{(Gen_{BZ}, Sign_{BZ}, Ver_{BZ})}$ scheme.
+    \item If $A$'s success probability is non-negligible, then so is $B$'s.
+\end{itemize}
+
+Therefore, $\mathsf{(Gen, Sign, Ver)}$ is BZ-secure if $\mathsf{(Gen_{BZ}, Sign_{BZ}, Ver_{BZ})}$ is BZ-secure. \\
+
+We now prove that the proposed scheme is not GYZ-secure. To do this, we use the fact that $F$ is non-collapsing. Let $D$ be an adversary which can break collapsing security for $F$. Following the proof to Theorem 13 in \cite{gyz}, we construct an adversary $A$ who uses $D$ to break the GYZ-security of $\mathsf{(Gen, Sign, Ver)}$. $A$ acts as follows:
+
+\begin{itemize}
+    \item $A$ queries $D$ to get a superposition of `messages' (preimages) $\rho = \sum_{m, m'} \alpha_m \alpha_{m'}^* | m \rangle \langle m' |$, and places this superposition $\rho$ in its message register. $A$ then flips a coin with outputs in $\{0,1\}$ and measures the message register iff the coin gives 0. This results in the following state:
+    \begin{align}
+        \frac{1}{2} \bigg[ \: |0\rangle \langle 0| \otimes \sum_m |\alpha_m|^2 |m \rangle \langle m| + |1\rangle \langle 1| \otimes \rho \: \bigg]
+    \end{align}
+    \item $A$ sends this state to the GYZ signing oracle, which signs it and places the signature in a newly created pair of signature registers. The result is then
+    \begin{align}
+        \begin{split}
+        \begin{array}{c c c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c c}
+            \frac{1}{2} \bigg[ & \sum_m |\alpha_m|^2 & |0\rangle \langle 0| & |m \rangle \langle m| &  |F(m) \rangle \langle F(m)| & \Ket{ \: \mathsf{Sign_{BZ}(sk}, F(m)) \: } \Bra{ \: \mathsf{Sign_{BZ}(sk}, F(m)) \: } & \\
+            & + \sum_{m, m'} \alpha_m \alpha_{m'}^* & |1\rangle \langle 1| & |m \rangle \langle m'| & | F(m) \rangle \langle F(m')| & \Ket{ \: \mathsf{Sign_{BZ}(sk}, F(m)) \: } \Bra{ \: \mathsf{Sign_{BZ}(sk}, F(m')) \: } & \bigg]
+        \end{array}
+        \end{split}
+    \end{align}
+    $A$ measures the `$F(m)$' register (the third register from the left), to obtain the state
+    \begin{align}
+        \begin{split}
+        \begin{array}{c c c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c c}
+            \frac{1}{2} \sum_y \beta_y \bigg[ & \sum_{m : F(m) = y} |\alpha_m|^2 & |0\rangle \langle 0| & |m \rangle \langle m| &  |y \rangle \langle y| & \Ket{ \: \mathsf{Sign_{BZ}(sk}, y) \: } \Bra{ \: \mathsf{Sign_{BZ}(sk}, y) \: } & \\
+            & + & |1\rangle \langle 1| & |\psi_y \rangle \langle \psi_y| & | y \rangle \langle y| & \Ket{ \: \mathsf{Sign_{BZ}(sk}, y) \: } \Bra{ \: \mathsf{Sign_{BZ}(sk}, y) \: } & \bigg]
+        \end{array}
+        \end{split}
+    \end{align}
+    where $| \psi_y \rangle = \sum_{m : F(m) = y} \alpha_m |m \rangle$.
+    \item $A$ applies $D$ to the second and third registers from the left and saves $D$'s output in a newly created ancilla register. If $D$ is a very good distinguisher which gives the right answer with probability $1 - \gamma$, then, by the gentle measurement lemma, the resulting state is $4 \sqrt{2\gamma}$ close to
+    \begin{align}
+        \begin{split}
+        \begin{array}{c c c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c @{\:\:\otimes\:\:} c c}
+            \frac{1}{2} \sum_y \beta_y \bigg[ & \sum_{m : F(m) = y} |\alpha_m|^2 & |0\rangle \langle 0| & |m \rangle \langle m| &  |y \rangle \langle y| & \Ket{ \: \mathsf{Sign_{BZ}(sk}, y) \: } \Bra{ \: \mathsf{Sign_{BZ}(sk}, y) \: } & \Ket{0} \Bra{0} & \\
+            & + & |1\rangle \langle 1| & |\psi_y \rangle \langle \psi_y| & | y \rangle \langle y| & \Ket{ \: \mathsf{Sign_{BZ}(sk}, y) \: } \Bra{ \: \mathsf{Sign_{BZ}(sk}, y) \: } & \Ket{1} \Bra{1} & \bigg]
+        \end{array}
+        \end{split}
+    \end{align}
+    (It is possible to boost the success probability of any bad distinguisher so that it becomes a good distinguisher, as long as the bad distinguisher still breaks collapsing security for $F$. See Section 4.1 of \cite{gyz}.)
+    \item A sends this state to its challenger for verification. Because all the signatures in this state were legally obtained, this state passes verification with probability 1, and is not perturbed by verification. Therefore, the challenger's output $\texttt{GYZ-Exp}(A)$ is equal to the state above.
+    \item By the same reasoning that is used in the proof of Theorem 13 in \cite{gyz}, there is no basis-respecting adversary that could produce such an output, as basis-respecting adversaries must commute with measurement in the computational basis. (Intuitively, it is clear that the distinguisher does not commute with measurement, because its very purpose is to determine whether or not a state has been measured.)
+\end{itemize}
+
+Therefore, if $F$ is non-collapsing, $\mathsf{(Gen, Sign, Ver)}$ is not GYZ-secure.
+
+% \section{AC + \textsf{iO} implies NCH}
+
+\section{NCH implies quantum tokens}
+
+\textbf{Claim.} Any non-collapsing hash function can be used to build a testable tokenised signature scheme. \\
+
+\noindent \textit{Scheme.} Given an arbitrary non-collapsing hash function $F$, we construct a one-bit, one-time, testable tokenised signature scheme. (By Section 5 of \cite{tokens}, a one-bit, one-time tokenised signature scheme can be extended to a fully-fledged tokenised signature scheme via a series of reductions.)
+
+Because $F$ is non-collapsing, there exists an adversary $A$ that can break collapsing security for $F$ with very high success probability $1 - \gamma$. We use $A$, along with an arbitrary classical digital signature scheme $\mathsf{(Gen, Sign, Ver)}$, to construct a tokens scheme. 
+\begin{itemize}
+    \item Let $\mathsf{(pk, sk)}$ denote the public and secret keys for the classical signature scheme, and let $(pk, sk)$ stand for the keys to our tokens scheme.
+    \item $A$ consists of two phases: 1) the phase which outputs a superposition of messages for its challenger to hash, and 2) the phase which guesses whether the challenger measured its entire state or only the output registers. Following \cite{zha17}, we let $A_0$ denote the first phase and $A_1$ the second.
+    \item \textsf{key-gen} runs \textsf{Gen} to generate $\mathsf{(pk, sk)}$ for the digital signature scheme. It then outputs $sk = (\mathsf{sk}, A_0)$ and $pk = (\mathsf{pk}, A_1)$.
+    \item $\textsf{token-gen}(sk)$ firstly runs $A_0$, twice, to generate two superpositions of messages $\sum_{m_0} \alpha_{m_0} \ket{m_0}$ and $\sum_{m_1} \alpha_{m_1} \ket{m_1}$. It computes $F$ in superposition on both, and measures both output registers. The result is two states $\ket{\psi_{y_0}}, \ket{\psi_{y_1}}$, where $\ket{\psi_{y_b}} = \sum_{m : F(m) = y_b} \ket{m, F(m)}$. It then signs the tuple $(y_0, y_1)$ using \textsf{sk} and \textsf{Sign}. \textsf{token-gen} outputs $\big( \ket{\psi_{y_0}}, \ket{\psi_{y_1}}, \mathsf{Sign}(\mathsf{sk}, (y_0, y_1)) \big)$ as $\ket{\stamp}$.
+    \item $\mathsf{sign}(\alpha \in \{0, 1\}, \ket{\stamp})$ measures the input register of $\ket{\psi_{y_\alpha}}$, and outputs, as a signature for $\alpha$, a preimage $m_\alpha$ for $y_\alpha$ under $F$, along with an unaltered $\ket{\psi_{y_{1-\alpha}}}$ and the signature $\mathsf{Sign}(\mathsf{sk}, (y_0, y_1))$.
+    \item $\mathsf{verify}\Big(pk, \alpha, \sigma = \big(m_\alpha, \ket{\psi_{y_{1-\alpha}}}, \mathsf{Sign}(\mathsf{sk}, (y_0, y_1))\big) \Big)$ firstly verifies the signature on $(y_0, y_1)$ using \textsf{pk} and \textsf{Ver}. Following this, it checks that $m_\alpha$ hashes to $y_\alpha$, and that the superposition of messages in the message register of $\ket{\psi_{y_{1-\alpha}}}$ hashes to $y_{1-\alpha}$. It then checks, using $A_1$, that the purported $\ket{\psi_{y_{1-\alpha}}}$ really does still have an unmeasured message register. In more precise terms, if $A_1$ outputs `measured', \textsf{verify} outputs $F$; otherwise, \textsf{verify} outputs $T$.
+    \item $\textsf{verify-token}(\ket{\stamp})$ applies $\mathsf{Ver_0}$, from Section 4.2 of \cite{zha17}, to both candidate states $\ket{\psi_{y_0}}$ and $\ket{\psi_{y_1}}$.
+\end{itemize}
+
+\noindent \textit{Proof.}
+
+\textit{Testability.} Testability follows directly from Zhandry's work in Section 4.2 of \cite{zha17}. The correctness portion of testability is identical to the correctness requirement for quantum money, which Zhandry's construction satisfies. The security portion of testability also follows from Section 4.2. By Zhandry's proof of security, we can assume that two dishonest candidate states $\ket{\phi_{0}}$ and $\ket{\phi_{1}}$ pass \textsf{verify-token} with at most negligible probability. Therefore, except with negligible probability, any two states passing \textsf{verify-token} will be honest states. Because \textsf{verify} always accepts honest tokens, our scheme satisfies equation (8) of \cite{tokens}.
+
+\textit{Unforgeability.} Suppose that there is an adversary who can, after seeing a single token $\ket{\stamp} = (\ket{\psi_{y_0}}, \ket{\psi_{y_1}})$, produce two signatures $(x_0, \ket{\phi_{0}})$ and $(x_1, \ket{\phi_{1}})$ that both pass \textsf{verify} with non-negligible probability. (Assume, for the present, that the adversary did not attempt to forge a signature on $(y_0, y_1)$.)
+
+Without loss of generality, consider the $(x_0, \ket{\phi_{0}})$ tuple. To pass the hash tests which \textsf{verify} executes, $x_0$ must be a valid preimage to $y_0$ under $F$.  Note that the only states $\ket{\phi_{0}}$ which the adversary can hold without violating the collision resistance of $F$, given that he already has $x_0$, are states negligibly close to $\ket{x_0, y_0}$. However, these states will almost invariably fail $A_1$'s distinguishing test, because $A_1$ is---under the assumption that we have already boosted its success probability to some $1 - \gamma$---able to tell, with probability $1 - \gamma$, the difference between any $\ket{x_0, y_0}$ and the state $\ket{\psi_{y_0}}$. The adversary's only alternative is to forge a signature on $(y_0, y_1)$, but his succeeding would violate the security of $\mathsf{(Gen, Sign, Ver)}$, which we assume is impossible. Therefore, there is no adversary which can produce two signatures that pass \textsf{verify}, having seen only one token---except with negligible probability. \\
+
+\noindent \textit{Remarks.}
+\begin{itemize}
+    \item The part of this scheme which is applicable to public-key quantum money is no different from Zhandry's construction of \cite{zha17}. We have essentially produced an extension of that construction which happens to be a tokens scheme.
+    \item One curious property of this NCH-based construction for tokens is that the signatures $\sigma$ it produces are quantum, while \cite{tokens}'s signatures were classical. In consequence, our construction loses some of the properties which \cite{tokens} considered desirable, such as the ability to convert quantum money into `classical cheques' which could be sent over classical channels. The sacrifice is not a fruitless one, however: since our scheme is based on non-collapsing hash functions, we also acquire the properties of `collision-free quantum money' which \cite{zha17} considered desirable, such as the ability to ensure that even the bank cannot forge quantum money (or signing tokens).
+\end{itemize}
+
+\section{NCH from iO}
+
+\subsection{From FHE}
+
+Let \textsf{HE} be a secure, leveled, \textit{quantum-capable} fully homomorphic encryption scheme (\cite{mahadev}). \textsf{HE} takes the keys $(pk, sk, evk)$. Following \cite{mahadev}, we denote \textsf{HE}'s sister scheme by \textsf{AltHE}, and assume that \textsf{AltHE} uses the same public and secret keys that \textsf{HE} does. (The definitions in \cite{mahadev} refer to single-bit homomorphic encryption schemes, but for convenience, we define our versions so that they take multiple-bit inputs.) Let \textsf{PRF} be a secure, puncturable PRF which takes a secret key $K$. The non-collapsing hash function is defined as follows:
+\begin{itemize}
+    \item \textsf{key-gen}: Generates the following constants which define the hash function:
+    \begin{itemize}
+        \item The keys $(pk, sk, evk)$ for \textsf{HE};
+        \item A key $K$ for \textsf{PRF};
+        \item $k$ $n$-bit binary strings $s_1, \cdots, s_k$, which represent $k$ secrets.
+    \end{itemize}
+    The hash function key that \textsf{key-gen} outputs consists of $(pk, evk)$ and two programs, $P_0$ and $P_1$.
+    \begin{itemize}
+        \item Let $b$ be a $k$-bit binary string. Let $s_b = \bigoplus_i b_i s_i$ (where $b_i$ represents the $i$th bit of $b$). $P_0(\cdot)$ is the obfuscation, under subexponentially secure \textsf{iO}, of the program that takes $b$ as input and outputs $\textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K, b) \big)$.
+        \item Let $\mathcal{S}$ denote the $k \times n$ matrix over $\mathbb{F}_2$ whose rows are $s_1, \cdots, s_k$. $P_1(\cdot)$ is the obfuscation under \textsf{shO} of the subspace membership oracle for the subspace ker($I_k \: | \: \mathcal{S}$), where $I_k$ is the $k \times k$ identity matrix, and $I_k \: | \: \mathcal{S}$ is the $k \times (n+k)$ block matrix obtained by joining $I_k$ and $\mathcal{S}$ together, with $I_k$ on the left and $\mathcal{S}$ on the right. For convenience, we denote this subspace (ker($I_k \: | \: \mathcal{S}$)) by $S_0$.
+    \end{itemize}
+    \item Evaluation: $F(b, x, r) = \textsf{AltHE.Enc}(pk, x \:;\: r) \oplus \textsf{HE.Convert}\big( P_0(b) \big)$. (We require that \textsf{HE.Convert} is deterministic; this requirement is satisfied by \cite{mahadev}'s construction.) $F$ can be evaluated publicly using $pk$ and $P_0$.
+\end{itemize}
+
+\subsubsection{Collision resistance}
+Note that, if an adversary can recover $x$, $x'$ such that $F(x) = F(x')$, he can evaluate $x \oplus x'$ and recover $s_b$ for some $b$. Therefore, in order to prove that it is impossible to find collisions, we prove that it is impossible to recover any $s_b = \bigoplus_i b_is_i$ given $P_0$ and $P_1$. We do so through a sequence of hybrids.
+
+\begin{itemize}
+    \item $H_0$: The challenger outputs $P_0$ and $P_1$, exactly as they are defined above.
+    \item $H_1$: Relying upon the security of \textsf{shO}, the challenger swaps $P_1$ for another subspace membership program that instead checks membership in a random, higher-dimensional subspace $S_1 \supset S_0$. $H_0$ and $H_1$ are indistinguishable by the security of \textsf{shO}.
+    \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
+    \item $H_3$: The challenger generates $k$ different secrets $s_1', \cdots, s_k'$ such that ker($I_k \: | \: \mathcal{S}'$) is also in $S_1$ (where $\mathcal{S}'$ denotes the matrix whose rows are $s_1', \cdots, s_k'$). This can be done efficiently using the following procedure:
+    \begin{itemize}
+        \item Choose a random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} We repeat the choosing procedure until an $M$ with this property is found.
+        \item Row reduce $M$ until it is in the form $I_k \: | \: \mathcal{S}'$.
+        \item Set $s_1', \cdots, s_k'$ to be the rows of $\mathcal{S}'$.
+    \end{itemize}
+    
+    The challenger then replaces $P_0$ with the program $P_0'$ such that $P_0'(b) = \textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K, b) \big)$, where $s_b'$ denotes $\bigoplus_i b_i s_i'$. We show that $H_2$ and $H_3$ are indistinguishable by gradually turning $H_2$ into $H_3$ under \textsf{iO}.
+    
+    For each $b^* \in \{0,1\}^k$ (in lexicographic order):
+    \begin{itemize}
+        \item $\mathcal{H}_0$: Puncture the PRF key $K$ at $b^*$. Denote the punctured key by $K\{b^*\}$. Harcode the value of $P_0$ for $b = b^*$. The program $P_0$ now does the following:
+        \begin{align}
+            P_0(b) =
+            \begin{cases}
+                \textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b > b^* \\
+                \textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b < b^* \\
+                \textsf{HE.Enc}\big( pk, s_{b^*} \:;\: \textsf{PRF}(K, b^*) \big) & b = b^*
+            \end{cases}
+        \end{align}
+        Since $P_0$ still behaves in the same way, this change is indistinguishable under \textsf{iO}.
+        \item $\mathcal{H}_1$: Replace the value $\textsf{PRF}(K, b^*)$ with a truly random value $r_0$. The program $P_0$ now behaves as follows:
+        \begin{align}
+            P_0(b) =
+            \begin{cases}
+                \textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b > b^* \\
+                \textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b < b^* \\
+                \textsf{HE.Enc}\big( pk, s_{b^*} \:;\: r_0 \big) & b = b^*
+            \end{cases}
+        \end{align}
+        $\mathcal{H}_1$ and $\mathcal{H}_0$ are indistinguishable by the security of punctured PRFs.
+        \item $\mathcal{H}_2$: Replace $P_0$ with the following program:
+        \begin{align}
+            P_0(b) =
+            \begin{cases}
+                \textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b > b^* \\
+                \textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b < b^* \\
+                \textsf{HE.Enc}\big( pk, s_{b^*}' \:;\: r_1 \big) & b = b^*
+            \end{cases}
+        \end{align}
+        $\mathcal{H}_2$ and $\mathcal{H}_1$ are indistinguishable by the security of fully homomorphic encryption: given two plaintexts, $s_{b^*}$ and $s_{b^*}'$, no adversary can distinguish between their respective encryptions under \textsf{HE}.
+        \item $\mathcal{H}_3$: Replace $P_0$ with the following program:
+        \begin{align}
+            P_0(b) =
+            \begin{cases}
+                \textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b > b^* \\
+                \textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K\{b^*\}, b) \big) & b < b^* \\
+                \textsf{HE.Enc}\big( pk, s_{b^*}' \:;\: \textsf{PRF}(K, b^*) \big) & b = b^*
+            \end{cases}
+        \end{align}
+        $\mathcal{H}_3$ and $\mathcal{H}_2$ are once again indistinguishable by the security of punctured PRFs.
+        \item $\mathcal{H}_4$:
+        \begin{align}
+            P_0(b) =
+            \begin{cases}
+                \textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K, b) \big) & b > b^* \\
+                \textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K, b) \big) & b \leq b^*
+            \end{cases}
+        \end{align}
+        Since $P_0$ still behaves in the same way, this hybrid and the last are indistinguishable under \textsf{iO}.
+    \end{itemize}
+    
+    We conclude that $P_0$, which outputs $\textsf{HE.Enc}\big( pk, s_b \:;\: \textsf{PRF}(K, b) \big)$, and $P_0'$, which outputs  $\textsf{HE.Enc}\big( pk, s_b' \:;\: \textsf{PRF}(K, b) \big)$, are indistinguishable under \textsf{iO}. Note that $\mathcal{S}'$ could have been any matrix such that ker($I_k \: | \: \mathcal{S}'$) was in $S_1$. As such, our hybrid argument justifies the claim that the adversary obtains no information from $P_0$ about the secrets $s_i$, except that ker($I_k \: | \: \mathcal{S}$) was in $S_1$, which it already knew. Therefore, any adversary who can break collision resistance for $F$ given $P_0$ and $P_1$ should equally be able to do so given only a description of $S_1$.
+    \item $H_4$: The challenger simply outputs $S_1$. It is clearly impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
+\end{itemize}
+
+\subsubsection{Non-collapsing}
+$P_1$ implements a subspace membership program which takes in $d$ (= $d_1 || d_2$) as argument and checks whether the following matrix equation holds:
+\begin{center}
+\includegraphics[width=0.8\textwidth]{Diagrams/1.png}
+\end{center}
+
+Note that this is equivalent to checking that, for all $i$, $d_2 \cdot s_i = d_{1, i}$ (where $d_{1, i}$ represents the $i$th bit of $d_1$).
+
+We now prove that $F$ is non-collapsing, viz., there is an adversary $A$ (consisting of two phases, $A_0$ and $A_1$) who wins the collapsing game with non-negligible probability. When $A_0$ is called upon to provide a superposition over the message registers, it prepares the superposition
+\begin{align}
+    \sum_{b \in \{0,1\}^k, x \in \{0,1\}^n, r} \sqrt{D(x, r)} \ket{b, x, r}.
+\end{align}
+($D$ is a distribution over $(x, r)$ defined in Definition 4.2 of \cite{mahadev}.)
+
+The challenger evaluates $F$ on this superposition, and obtains the state
+\begin{align}
+    \sum_{b \in \{0,1\}^k, x \in \{0,1\}^n, r} \sqrt{D(x, r)} \ket{b, x, r} \ket{\textsf{AltHE.Enc}(pk, x \:;\: r) \oplus \hat c},
+\end{align}
+where $\hat c$ is an encryption under $\textsf{AltHE}$ of $s_b$ such that property 3. in Definition 4.2 of \cite{mahadev} is satisfied.
+
+The challenger then measures either the output register only or else the entire state, and returns one of the two following states to $A_1$:
+
+\begin{itemize}
+    \item $\ket{\psi_y} = \sum_{b} \alpha_{b} \ket{b, x_{\widetilde{b}}, -e_b} \ket{y}$, where $x_{\widetilde{b}} = x - s_{\widetilde{b}}$ for the $x$ such that $A\big( J^{-1}(x) \big) = y$. (NB: In this context, the minus in $x - s_{\widetilde{b}}$ denotes the minus over the integers when $x$ and $s_{\widetilde{b}}$ are thought of integers represented in binary, and \textit{not} the bitwise XOR operation.)
+    \item $\ket{b^*, x^*, e^*} \ket{F(b^*, x^*, e^*)}$ for some $(b^*, x^*, e^*)$.
+\end{itemize}
+
+In order to tell which state it has been given, $A_1$ performs the following procedure.
+\begin{itemize}
+    \item Uncompute the $e$ register. This is possible because the value of the $e$ register for any member of the superposition can be computed from the corresponding values of $y$, $x$ and $b$, using the hash function key $(A, P_0, P_1)$.
+    \item Apply the Hadamard transform to the remaining registers. In the case where $A_1$ was given $\ket{\psi_y}$, this results in the following state:
+    \begin{align}
+        \sum_d \bigg( \sum_b (-1)^{d \cdot (b \: || \: x_b)} \bigg) \ket{d} = \sum_d \bigg( \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x - s_{\widetilde{b}})} \bigg) \ket{d}
+    \end{align}
+    Not all $d \in \{0,1\}^{\ell n + k}$ will be supported in this superposition (and we will make precise which ones are). In the case where $A_1$ was given $\ket{b^*, x^*, e^*} \ket{F(b^*, x^*, e^*)}$, however, every $d$ will appear in the superposition, because there will be no opportunity for the amplitude of $d$ after Hadamard to cancel.
+    
+    We now focus on the amplitude of each $d$ in the $\ket{\psi_y}$ case, in order to determine which $d$s will be supported in the superposition after Hadamard. Note, firstly, that we can rewrite the amplitude of $d$ in the following way:
+    \begin{align}
+    \begin{split}
+        \sum_b (-1)^{d \cdot (b \: || \: x_b)} &= \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x - s_{\widetilde{b}})} \\
+        &= (-1)^{d_2 \cdot x} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot \big( (x - s_{\widetilde{b}}) \oplus x \big)}
+    \end{split}
+    \end{align}
+\end{itemize}
+
+\subsection{From LWE}
+
+Let $q$ be a prime, and let $\ell = \ceil*{\log q}$. Fix a bijective mapping $J : \mathbb{Z}_q \rightarrow \mathbb{F}^\ell_2$. If $x$ is a vector in $\mathbb{Z}_q^n$, we write $J(x) \in \mathbb{F}^{\ell n}_2$ for the vector we obtain by applying $J$ to each entry of $x$ and stacking the results.
+
+Let \textsf{PRP} be a secure, puncturable pseudorandom permutation which takes a secret key $K$. The non-collapsing hash function is defined as follows:
+\begin{itemize}
+    \item \textsf{key-gen}: Generates the following constants which define the hash function:
+    \begin{itemize}
+        \item A randomly-chosen $m \times n$ LWE matrix, $A$, whose entries are in $\mathbb{Z}_q$;
+        \item A key $K$ for \textsf{PRP};
+        \item $e_b$, a function of $b$ which outputs a vector in $\mathbb{Z}_q^n$ that has (sufficiently small) bounded magnitude. For concreteness, we think of $e_b$ as a puncturable PRF which takes a secret key $K_e$, so that $e_b = \textsf{PRF}(K_e, b)$.
+        \item $k$ $n$-bit binary strings $s_1, \cdots, s_k$, which represent $k$ secrets.
+    \end{itemize}
+    The hash function key that \textsf{key-gen} outputs consists of $A$ and two programs, $P_0$ and $P_1$.
+    \begin{itemize}
+        \item Let $b$ be a $k$-bit binary string. Let $s_b = \bigoplus_i b_i s_i$ (where $b_i$ represents the $i$th bit of $b$). $P_0(\cdot)$ is the obfuscation, under subexponentially secure \textsf{iO}, of the program that takes a string $b$ as input and outputs $As_{\widetilde{b}} + e_{b}$, where $\widetilde{b} = \textsf{PRP}(K, b)$. (When we write $As_{\widetilde{b}} + e_{b}$, we interpret $s_{\widetilde{b}}$ as a vector in $\mathbb{Z}_q^n$ with entries which happen to be 0 or 1, instead of a vector in $\mathbb{F}_2^n$.)
+        \item Let $\mathcal{S}$ denote the $k \times n$ matrix over $\mathbb{F}_2$ whose rows are $s_1, \cdots, s_k$. $P_1(\cdot)$ is the obfuscation under \textsf{shO} of the subspace membership oracle for the subspace ker($I_k \: | \: \mathcal{S}$), where $I_k$ is the $k \times k$ identity matrix, and $I_k \: | \: \mathcal{S}$ is the $k \times (n+k)$ block matrix obtained by joining $I_k$ and $\mathcal{S}$ together, with $I_k$ on the left and $\mathcal{S}$ on the right. For convenience, we denote this subspace (ker($I_k \: | \: \mathcal{S}$)) by $S_0$.
+    \end{itemize}
+    \item Evaluation: $F(b, x, e) = Ax + e + As_{\widetilde{b}} + e_{b}$, where $x$ is a vector in $\mathbb{Z}_q^n$, and $e$ is a vector in $\mathbb{Z}_q^n$ with sufficiently small magnitude. $F$ can be evaluated publicly using $P_0$ and $A$.
+\end{itemize}
+
+\subsubsection{Collision resistance}
+Note that, if an adversary can recover $x$, $x'$ such that $F(x) = F(x')$, he can evaluate $x - x'$ and recover $s_b$ for some $b$. Therefore, in order to prove that it is impossible to find collisions, we prove that it is impossible to recover any $s_b = \bigoplus_i b_is_i$ given $P_0$ and $P_1$. We do so through a sequence of hybrids.
+
+\begin{itemize}
+    \item $H_0$: The challenger outputs $P_0$ and $P_1$, exactly as they are defined above.
+    \item $H_1$: Relying upon the security of \textsf{shO}, the challenger swaps $P_1$ for another subspace membership program that instead checks membership in a random, higher-dimensional subspace $S_1 \supset S_0$. $H_0$ and $H_1$ are indistinguishable by the security of \textsf{shO}.
+    \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
+    \item $H_3$: The challenger generates $k$ different secrets $s_1', \cdots, s_k'$ such that ker($I_k \: | \: \mathcal{S}'$) is also in $S_1$ (where $\mathcal{S}'$ denotes the matrix whose rows are $s_1', \cdots, s_k'$). This can be done efficiently using the following procedure:
+    \begin{itemize}
+        \item Choose a random $k \times (\ell n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} We repeat the choosing procedure until an $M$ with this property is found.
+        \item Row reduce $M$ until it is in the form $I_k \: | \: \mathcal{S}'$.
+        \item Set $s_1', \cdots, s_k'$ to be the rows of $\mathcal{S}'$.
+    \end{itemize}
+    
+    The challenger then replaces $P_0$ with the program $P_0'$ such that $P_0'(b) = As'_{\widetilde{b}} + e_b$, where $s_b'$ denotes $\bigoplus_i b_i s_i'$. We show that $H_2$ and $H_3$ are indistinguishable by gradually turning $H_2$ into $H_3$ under \textsf{iO}.
+    
+    For each $b^* \in \{0,1\}^{k}$ (in lexicographic order):
+    \begin{itemize}
+        \item $\mathcal{H}_0$: Puncture $K$ (the \textsf{PRP} key) and $K_e$ (the \textsf{PRF} key) at the same point, $b^*$. Denote the punctured keys by $K\{b^*\}$ and $K_e\{b^*\}$, respectively. Hardcode $P_0'(b) = As_{\widetilde{b^*}} + e_{b^*}$. The program $P_0'$ now does the following:
+        \begin{align}
+            P_0'(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                As_{_{\textsf{PRP}(K, b^*)}} + \textsf{PRF}(K_e, b^*) & b = b^*
+            \end{cases}
+        \end{align}
+        Since $P_0'$ still behaves the same way, this change is undetectable under \textsf{iO}.
+        \item $\mathcal{H}_1$: Replace $P_0'$ with the following program:
+        \begin{align}
+            P_0'(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                r & b = b^*
+            \end{cases}
+        \end{align}
+        where $r$ is a random string.
+        
+        We show that this hybrid and the last are indistinguishable by reducing the problem of telling them apart to the problem of decisional LWE with secrets drawn from any distribution $\mathcal{D}$ that has sufficient entropy (\cite{robustness}). Following \cite{robustness}, we denote this problem by \textsf{DLWE}($\mathcal{D}$). In this case, we set $\mathcal{D}$ to be the uniform distribution over the subspace $\mathrm{span}(s_1, \cdots, s_k$).
+        
+        Let $B$ be an adversary for the latter problem. $B$ receives an LWE sample $c_\alpha = \begin{cases} As_{\widehat b} + \hat e & \alpha = 0 \\ r & \alpha = 1\end{cases}$, where $\hat b$ and $\hat e$ are chosen at random. It also receives a description of the distribution $\mathcal{D} = \mathrm{span}(s_1, \cdots, s_k)$. $B$ creates the following program:
+        
+        \begin{align}
+            P_B^\alpha(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                c_\alpha & b = b^*
+            \end{cases}
+        \end{align}
+        
+        Let $A$ now be an adversary who can distinguish between $\mathcal{H}_0$ and $\mathcal{H}_1$; or, in other words, an adversary who can distinguish between
+        
+        \begin{align}
+            P_0'^0(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                As_{_{\textsf{PRP}(K, b^*)}} + \textsf{PRF}(K_e, b^*) & b = b^*
+            \end{cases}
+        \end{align}
+        
+        and 
+        
+        \begin{align}
+            P_0'^1(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                r & b = b^*
+            \end{cases}
+        \end{align}
+        
+        given $S_1$ (which $B$ can provide, because it knows $\mathcal{D}$).
+        
+        Observe that, if $A$ can distinguish between $P_0'^0$ and the following program:
+        
+        \begin{align}
+            P_0'^{\frac{1}{3}}(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                As_{_{\textsf{PRP}(K, b^*)}} + \hat e & b = b^*
+            \end{cases}
+        \end{align}
+        
+        then we can use $A$ to construct an adversary $C$ who breaks punctured PRF security. $C$ has a challenge value which is either a random value $e$ or the value $\textsf{PRF}(K_e, b^*)$; it also has the punctured key $K_e\{b^*\}$. Everything else in the programs $P_0'^0$ and $P_0'^{\frac{1}{3}}$---for they are the same, except for $\hat e$ and $\textsf{PRF}(K_e, b^*)$---$C$ can construct for itself. $A$ cannot distinguish between the two random values $e$ and $\hat e$, so it must be able to tell the version of $P_0'$ that has $e$ in it from the version with $\textsf{PRF}(K_e, b^*)$ in it. By outputting whatever $A$ outputs, $C$ can break punctured PRF security.
+        
+        Furthermore, if $A$ can tell the difference between $P_0'^{\frac{1}{3}}$ and the following program:
+        
+        \begin{align}
+            P_0'^{\frac{2}{3}}(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                As_{_{\widehat b}} + \hat e & b = b^*
+            \end{cases}
+        \end{align}
+        
+        then we can, once again, use $A$ to construct an adversary $D$ who breaks punctured PRP security, by a similar path to the one which we took to construct $C$.
+        
+        Therefore, $A$ must be able to tell the difference between $P_0'^{\frac{2}{3}}$ and $P_0'^{1}$. Notice that $P_0'^{\frac{2}{3}} = P_B^0$, and $P_0'^{1} = P_B^1$. As such, by outputting whatever $A$ outputs, $B$ can break decisional LWE for a non-uniform distribution $\mathcal{D}$. We thus obtain the result that the two hybrids $\mathcal{H}_0$ and $\mathcal{H}_1$ are indistinguishable.
+        \item $\mathcal{H}_2$: Replace $P_0'$ with the following program:
+        \begin{align}
+            P_0'(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b > b^* \\
+                As'_{\textsf{PRP}(K\{b^*\}, b)} + \textsf{PRF}(K_e\{b^*\}, b) & b < b^* \\
+                As'_{_{\textsf{PRP}(K, b^*)}} + \textsf{PRF}(K_e, b^*) & b = b^*
+            \end{cases}
+        \end{align}
+        $\mathcal{H}_1$ and $\mathcal{H}_2$ are indistinguishable by an argument fully symmetric with the one we used to argue that $\mathcal{H}_0$ and $\mathcal{H}_1$ were indistinguishable.
+        \item $\mathcal{H}_3$: Replace $P_0'$ with the following program:
+        \begin{align}
+            P_0'(b) = 
+            \begin{cases}
+                As_{\textsf{PRP}(K, b)} + \textsf{PRF}(K_e, b) & b > b^* \\
+                As'_{\textsf{PRP}(K, b)} + \textsf{PRF}(K_e, b) & b \leq b^* \\
+            \end{cases}
+        \end{align}
+        Since $P_0'$ still behaves the way that it did in $\mathcal{H}_2$, $\mathcal{H}_3$ and $\mathcal{H}_2$ are indistinguishable under \textsf{iO}.
+    \end{itemize}
+    We conclude that $P_0$ (which outputs $As_{\widetilde{b}} + e_{b}$) and $P_0'$ (which outputs $As'_{\widetilde{b}} + e_{b}$) are indistinguishable under \textsf{iO}. Note that $\mathcal{S}'$ could have been any matrix such that ker($I_k \: | \: \mathcal{S}'$) was in $S_1$. As such, our hybrid argument justifies the claim that the adversary obtains no information from $P_0$ about the secrets $s_i$, except that ker($I_k \: | \: \mathcal{S}$) was in $S_1$, which it already knew. Therefore, any adversary who can break collision resistance for $F$ given $P_0$ and $P_1$ should equally be able to do so given only a description of $S_1$ and oracle access to $P_0$.
+
+    Suppose that there were an adversary $A$ who could distinguish (after $p(n)$ queries, where $p$ is a polynomial) the output of an oracle version of $P_0$ from that of a random oracle, given the description of $S_1$. We enlist $A$, once again, to construct an adversary $B$ who breaks \textsf{DLWE}(span$\big(s_1, \cdots, s_k)\big)$. $B$ knows the distribution $\mathcal{D} = \mathrm{span}\big(s_1, \cdots, s_k\big)$, and it also has a single challenge string $c_\alpha = \begin{cases} As_{\widehat b} + \hat e & \alpha = 0 \\ r & \alpha = 1\end{cases}$.
+    
+    Since $B$ knows the distribution $\mathcal{D} = \mathrm{span}(s_1, \cdots, s_k)$, it can generate a subspace $S_1$ with the appropriate properties and give it to $A$. $B$ can return $c_\alpha$ in response to $A$'s first query to its oracle, and in response to $A$'s other queries, $B$ can choose either to generate a random string $r$ and return that, or to return $As_{ \textsf{PRP}(K, b)} + e_{b}$ for a randomly chosen $b$.
+    
+    By assumption, $A$ can distinguish with non-negligible advantage between an oracle which always outputs random strings and an oracle which always behaves like $P_0$. There must, therefore, be at least one pair of integers $(m, m+1)$, with $0 \leq m < m+1 \leq p(n)$, such that $A$ can distinguish between an oracle which outputs random strings for the first $m$ queries only, and thereafter outputs $As_{ \textsf{PRP}(K, b)} + e_{b}$, and an oracle which outputs random strings for the first $m+1$ queries. (If this were not the case, then we could construct a hybrid argument with $p(n)$ hybrids to show that $A$ cannot distinguish between the two oracles it claims to distinguish between.) Even if $B$ does not know $m$, it can guess $m$ correctly with inverse-polynomial probability. Presuming, then, that $B$ guesses $m$ correctly, $B$ can do the following:
+    \begin{itemize}
+        \item Respond with $c_\alpha$ to $A$'s first query.
+        \item For queries numbered 2 to $m+1$, respond with random strings.
+        \item For queries numbered $> m+1$, respond with strings of the form $As_{ \textsf{PRP}(K, b)} + e_{b}$.
+    \end{itemize}
+    By assumption, if $B$ outputs what $A$ outputs, it can distinguish between its challenge string and a random string with non-negligible probability. Since $B$ was a \textsf{DLWE}$(\mathcal{D})$ adversary, we conclude that there is no $A$ who can distinguish between the output of a $P_0$ oracle and a random oracle. It is clearly impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from a random oracle and $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$. This completes our proof that $F$ is collision resistant.
+\end{itemize}
+
+\subsubsection{Non-collapsing}
+$P_1$ implements a subspace membership program which takes in $d$ (= $d_1 || d_2$) as argument and checks whether the following matrix equation holds:
+\begin{center}
+\includegraphics[width=0.8\textwidth]{Diagrams/1.png}
+\end{center}
+
+Note that this is equivalent to checking that, for all $i$, $d_2 \cdot s_i = d_{1, i}$ (where $d_{1, i}$ represents the $i$th bit of $d_1$).
+
+We now prove that $F$ is non-collapsing, viz., there is an adversary $A$ (consisting of two phases, $A_0$ and $A_1$) who wins the collapsing game with non-negligible probability. When $A_0$ is called upon to provide a superposition over the message registers, it prepares the uniform superposition $\sum_{b, x, e} \alpha_{b, x, e} \ket{b, x, e}$. The challenger evaluates $F$ on this superposition, and obtains the state
+\begin{align}
+    \sum_{b, x, e} \alpha_{b, x, e} \ket{b, x, e} \ket{A\big( J^{-1}(x) \big) + e + A\big( J^{-1}(s_{\widetilde{b}}) \big) + e_b}.
+\end{align}
+The challenger then measures either the output register only or else the entire state, and returns one of the two following states to $A_1$:
+
+\begin{itemize}
+    \item $\ket{\psi_y} = \sum_{b} \alpha_{b} \ket{b, x_{\widetilde{b}}, -e_b} \ket{y}$, where $x_{\widetilde{b}} = x - s_{\widetilde{b}}$ for the $x$ such that $A\big( J^{-1}(x) \big) = y$. (NB: In this context, the minus in $x - s_{\widetilde{b}}$ denotes the minus over the integers when $x$ and $s_{\widetilde{b}}$ are thought of integers represented in binary, and \textit{not} the bitwise XOR operation.)
+    \item $\ket{b^*, x^*, e^*} \ket{F(b^*, x^*, e^*)}$ for some $(b^*, x^*, e^*)$.
+\end{itemize}
+
+In order to tell which state it has been given, $A_1$ performs the following procedure.
+\begin{itemize}
+    \item Uncompute the $e$ register. This is possible because the value of the $e$ register for any member of the superposition can be computed from the corresponding values of $y$, $x$ and $b$, using the hash function key $(A, P_0, P_1)$.
+    \item Apply the Hadamard transform to the remaining registers. In the case where $A_1$ was given $\ket{\psi_y}$, this results in the following state:
+    \begin{align}
+        \sum_d \bigg( \sum_b (-1)^{d \cdot (b \: || \: x_b)} \bigg) \ket{d} = \sum_d \bigg( \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x - s_{\widetilde{b}})} \bigg) \ket{d}
+    \end{align}
+    Not all $d \in \{0,1\}^{\ell n + k}$ will be supported in this superposition (and we will make precise which ones are). In the case where $A_1$ was given $\ket{b^*, x^*, e^*} \ket{F(b^*, x^*, e^*)}$, however, every $d$ will appear in the superposition, because there will be no opportunity for the amplitude of $d$ after Hadamard to cancel.
+    
+    We now focus on the amplitude of each $d$ in the $\ket{\psi_y}$ case, in order to determine which $d$s will be supported in the superposition after Hadamard. Note, firstly, that we can rewrite the amplitude of $d$ in the following way:
+    \begin{align}
+    \begin{split}
+        \sum_b (-1)^{d \cdot (b \: || \: x_b)} &= \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x - s_{\widetilde{b}})} \\
+        &= (-1)^{d_2 \cdot x} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot \big( (x - s_{\widetilde{b}}) \oplus x \big)}
+    \end{split}
+    \end{align}
+    
+    \textbf{Claim.} For every $d_2 \in \{0,1\}^{\ell n}$, there is a $d_2'$ such that, for any binary string $s$, $d_2 \cdot \big( (x - s) \oplus x \big) = d_2' \cdot s$. Furthermore, $d_2'$ is efficiently computable from $d_2$.
+    
+    \textit{Proof.} Set $d'_2$ as follows:
+    \begin{align}
+        d'_2 = d_2 \cdot \big( (x - (11 \cdots 1)) \oplus x \big).
+    \end{align}
+    We show that this choice is correct using linearity, i.e., by showing that, $\forall i, d_{2, i}' \cdot s_i = \big[ d_2 \cdot \big( (x - s) \oplus x \big) \big]_i$.
+\end{itemize}
+
+\begin{comment}
+\section{Untitled}
+\textbf{Claim.} Let $C_0$, $C_1$ be circuits whose outputs differ only in one input, $x^*$. If there is an adversary $A$ who can distinguish between $\textsf{iO}(C_0) \otimes \textsf{iO}(C_0)$ and $\textsf{iO}(C_1) \otimes \textsf{iO}(C_0)$, then it can recover the input $x^*$.
+
+\noindent \textit{Proof.} Define
+\begin{align}
+    C_{\textrm{mid}}(x) =
+    \begin{cases}
+    \textsf{iO}(C_0) & x_1 = 0 \\
+    \textsf{iO}(C_1) & x_1 = 1
+    \end{cases}
+\end{align}
+
+where $x_1$ stands for the first bit of $x$.
+
+Let $C = \textsf{iO}(C_{\textrm{mid}}) \otimes \textsf{iO}(C_0)$.
+
+\noindent \textit{Lemma.} If $x_1^* =0$, then $C$ is indistinguishable from $\textsf{iO}(C_0) \otimes \textsf{iO}(C_0)$. Likewise, if $x_1^* =1$, then $C$ is indistinguishable from $\textsf{iO}(C_1) \otimes \textsf{iO}(C_0)$.
+
+\noindent \textit{Proof of lemma.} Without loss of generality, consider $x_1^* =0$. In this case, $C_0$ computes the same function as $C_{\textrm{mid}}$, because
+
+\begin{itemize}
+    \item on all $x \neq x^*$: $C_0(x) = C_1(x)$, which implies that $\big[ \textsf{iO}(C_0) \big] (x) = \big[ \textsf{iO}(C_1) \big] (x)$, and so $C_{\textrm{mid}}(x) = \big[ \textsf{iO}(C_0) \big](x) = C_0(x)$;
+    \item on $x^*$: since $x^*_1 = 0$, $C_{\textrm{mid}}(x^*) = \big[ \textsf{iO}(C_0) \big](x^*) = C_0(x)$.
+\end{itemize}
+
+Any adversary $A$ who can distinguish $C$ from $\textsf{iO}(C_0) \otimes \textsf{iO}(C_0)$ implies the existence of another adversary $B$ who can distinguish $\textsf{iO}(C_{\textrm{mid}})$ from $\textsf{iO}(C_0)$, as long as $B$ can obtain an independent copy of $\textsf{iO}(C_0)$. When $B$'s challenger hands it one of $\textsf{iO}(C_{\textrm{mid}})$ and $\textsf{iO}(C_0)$, $B$ simply concatenates it with its copy of $\textsf{iO}(C_0)$ and gives the result to $A$.
+
+Any adversary $A$ who can distinguish $\textsf{iO}(C_1) \otimes \textsf{iO}(C_0)$ from $\textsf{iO}(C_0) \otimes \textsf{iO}(C_0)$ implies the existence of another adversary $B$ who can distinguish $\textsf{iO}(C_{1})$ from $\textsf{iO}(C_0)$, as long as $B$ can obtain an independent copy of $\textsf{iO}(C_0)$. When $B$'s challenger hands it one of either $\textsf{iO}(C_{1})$ or $\textsf{iO}(C_0)$, $B$ simply concatenates it with its copy of $\textsf{iO}(C_0)$ and gives the result to $A$.
+
+\textit{Can} we give $B$ an independent copy of $\textsf{iO}(C_0)$ without violating \textsf{eO}? By \cite{eO}, the security of \textsf{iO} guarantees \textsf{eO} if the two functions being obfuscated differ on only one (or at most polynomially many) inputs. \textsf{eO}, in turn, guarantees that \textit{any} efficient adversary who can distinguish $\textsf{iO}(C_{1})$ from $\textsf{iO}(C_0)$ can extract the one input on which their outputs differ. This includes even our adversary $B$, whom we provide with an additional $\textsf{iO}(C_0)$ and with $A$'s services.
+\end{comment}
+
+\bibliographystyle{alpha}
+\bibliography{bibliography}
+\end{document}
