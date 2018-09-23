@@ -170,6 +170,8 @@ Without loss of generality, consider the $(x_0, \ket{\phi_{0}})$ tuple. To pass 
 
 \section{NCH from iO}
 
+\subsection{Definition of NCH}
+
 Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2^n$ to $\mathbb{Z}_q^n$ such that
 
 \begin{align}
@@ -199,38 +201,8 @@ The non-collapsing hash function is defined as follows:
     \item Evaluation: Let $s_b = \bigoplus_i b_i s_i$, where $b_i$ denotes the $i$th bit of $b$. Similarly, let $e_b = \sum_i b_i e_i$. (The sum in the latter uses addition modulo $q$.) $F(b, x, e) = A\big( L(x) \big) + e + A\big( L(s_b) \big) + e_b$. $F$ can be evaluated publicly using the hash function key.
 \end{itemize}
 
-\subsection{Collision resistance}
-Note that, if an adversary can recover $x$, $x'$ such that $F(x) = F(x')$, he can evaluate $x \oplus x'$ and recover $s_b$ for some $b$. Therefore, in order to prove that it is impossible to find collisions, we prove that it is impossible to recover any $s_b = \bigoplus_i b_is_i$ given the hash function key. We do so through a sequence of hybrids.
-
-\begin{itemize}
-    \item $H_0$: The challenger outputs $P_0$ and $P_1$, exactly as they are defined above.
-    \item $H_1$: Relying upon the security of \textsf{shO}, the challenger swaps $P_1$ for another subspace membership program that instead checks membership in a random, higher-dimensional subspace $S_1 \supset S_0$. $H_0$ and $H_1$ are indistinguishable by the security of \textsf{shO}.
-    \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
-    \item $H_3$: The challenger generates $k$ different secrets $s_1', \cdots, s_k'$ such that ker($I_k \: | \: \mathcal{S}'$) is also in $S_1$ (where $\mathcal{S}'$ denotes the matrix whose rows are $s_1', \cdots, s_k'$). This can be done efficiently using the following procedure:
-    \begin{itemize}
-        \item Choose a random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} We repeat the choosing procedure until an $M$ with this property is found.
-        \item Row reduce $M$ until it is in the form $I_k \: | \: \mathcal{S}'$.
-        \item Set $s_1', \cdots, s_k'$ to be the rows of $\mathcal{S}'$.
-    \end{itemize}
-    
-    The challenger then replaces the samples $A\big( L(s_i) \big) + e_i$ with $A\big( L(s_i') \big) + e_i$.
-    We conclude that $P_0$ (which outputs $As_{\widetilde{b}} + e_{b}$) and $P_0'$ (which outputs $As'_{\widetilde{b}} + e_{b}$) are indistinguishable under \textsf{iO}. Note that $\mathcal{S}'$ could have been any matrix such that ker($I_k \: | \: \mathcal{S}'$) was in $S_1$. As such, our hybrid argument justifies the claim that the adversary obtains no information from $P_0$ about the secrets $s_i$, except that ker($I_k \: | \: \mathcal{S}$) was in $S_1$, which it already knew. Therefore, any adversary who can break collision resistance for $F$ given $P_0$ and $P_1$ should equally be able to do so given only a description of $S_1$ and oracle access to $P_0$.
-
-    Suppose that there were an adversary $A$ who could distinguish (after $p(n)$ queries, where $p$ is a polynomial) the output of an oracle version of $P_0$ from that of a random oracle, given the description of $S_1$. We enlist $A$, once again, to construct an adversary $B$ who breaks \textsf{DLWE}(span$\big(s_1, \cdots, s_k)\big)$. $B$ knows the distribution $\mathcal{D} = \mathrm{span}\big(s_1, \cdots, s_k\big)$, and it also has a single challenge string $c_\alpha = \begin{cases} As_{\widehat b} + \hat e & \alpha = 0 \\ r & \alpha = 1\end{cases}$.
-    
-    Since $B$ knows the distribution $\mathcal{D} = \mathrm{span}(s_1, \cdots, s_k)$, it can generate a subspace $S_1$ with the appropriate properties and give it to $A$. $B$ can return $c_\alpha$ in response to $A$'s first query to its oracle, and in response to $A$'s other queries, $B$ can choose either to generate a random string $r$ and return that, or to return $As_{ \textsf{PRP}(K, b)} + e_{b}$ for a randomly chosen $b$.
-    
-    By assumption, $A$ can distinguish with non-negligible advantage between an oracle which always outputs random strings and an oracle which always behaves like $P_0$. There must, therefore, be at least one pair of integers $(m, m+1)$, with $0 \leq m < m+1 \leq p(n)$, such that $A$ can distinguish between an oracle which outputs random strings for the first $m$ queries only, and thereafter outputs $As_{ \textsf{PRP}(K, b)} + e_{b}$, and an oracle which outputs random strings for the first $m+1$ queries. (If this were not the case, then we could construct a hybrid argument with $p(n)$ hybrids to show that $A$ cannot distinguish between the two oracles it claims to distinguish between.) Even if $B$ does not know $m$, it can guess $m$ correctly with inverse-polynomial probability. Presuming, then, that $B$ guesses $m$ correctly, $B$ can do the following:
-    \begin{itemize}
-        \item Respond with $c_\alpha$ to $A$'s first query.
-        \item For queries numbered 2 to $m+1$, respond with random strings.
-        \item For queries numbered $> m+1$, respond with strings of the form $As_{ \textsf{PRP}(K, b)} + e_{b}$.
-    \end{itemize}
-    By assumption, if $B$ outputs what $A$ outputs, it can distinguish between its challenge string and a random string with non-negligible probability. Since $B$ was a \textsf{DLWE}$(\mathcal{D})$ adversary, we conclude that there is no $A$ who can distinguish between the output of a $P_0$ oracle and a random oracle. It is clearly impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from a random oracle and $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$. This completes our proof that $F$ is collision resistant.
-\end{itemize}
-
 \subsection{Non-collapsing}
-$P_1$ implements a subspace membership program which takes in $d$ (= $d_1 || d_2$) as argument and checks whether the following matrix equation holds:
+$P$ implements a subspace membership program which takes in $d$ (= $d_1 || d_2$) as argument and checks whether the following matrix equation holds:
 \begin{center}
 \includegraphics[width=0.8\textwidth]{Diagrams/1.png}
 \end{center}
@@ -252,8 +224,12 @@ The challenger evaluates $F$ on this superposition, and obtains the state
 The challenger then measures either the entire state or else the output register only, and returns one of the two following states to $A_1$:
 
 \begin{itemize}
-		\item $\ket{b^*, x^*, e^*} \ket{F(b^*, x^*, e^*)}$ for some $(b^*, x^*, e^*)$.
-     \item $\ket{\psi_y}$. We claim that $\ket{\psi_y}$ has a specific form. To show that it has this form, we prove the following lemma.
+		\item $\ket{\psi_{\mathrm{meas}}} = \ket{b, x, e} \ket{F(b, x, e)}$ for some $(b, x, e)$.
+     \item $\ket{\psi_y}$ for some $y$. We claim that $\ket{\psi_y}$ has (up to normalisation) the specific form 
+		\begin{align}
+			\ket{\psi_y} = \sum_b \sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)} \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
+		\end{align}
+		To show that it has this form, we prove the following lemma.
 		
 		\textbf{Lemma.} Fix a $y$. For each $b \in \{0,1\}^k$, there is exactly one $(x', e')$ such that $F(b, x', e') = y$, and it has the form $(x' = x^* \oplus s_b, e' = e^* - e_b)$, where $s_b = \bigoplus_i b_i s_i$, $e_b = \sum_i b_i e_i$, and ($x^*, e^*$) is the unique solution to the equation $A\big( L(x^*) \big) + e^* = y$.
 
@@ -276,36 +252,60 @@ The challenger then measures either the entire state or else the output register
 
 		For each $b \in \{0,1\}^k$, there will be exactly one $(x', e')$ such that the pair of equations above are satisfied, and $x'$ and $e'$ have the form we claimed they would have. The lemma is thus proved.
 
-		Given the lemma, it is clear that $\ket{\psi_y}$ will have the following form:
+		Given the lemma, it is clear that (up to normalisation)
 		\begin{align}
-			\ket{\psi_y} = \sum_b \alpha_b \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
+			\ket{\psi_y} = \sum_b \sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)} \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
+		\end{align}
+
+		Since the maximum amplitude of $e_b$ is small compared to the Gaussian parameter of the distribution $D$, $\sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)}$ should be approximately the same for all $b$. In the following analysis, therefore, we replace the amplitudes in the above expression with a global normalisation factor. In other words,
+		\begin{align}
+			\ket{\psi_y} \approx \alpha \sum_b \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
 		\end{align}
 \end{itemize}
 
-In order to tell which state it has been given, $A_1$ performs the following procedure.
+In order to tell whether it has been given $\ket{\psi_{\mathrm{meas}}}$ or $\ket{\psi_y}$, $A_1$ performs the following procedure.
 \begin{itemize}
-    \item Uncompute the $e$ register. This is possible because the value of the $e$ register for any member of the superposition can be computed from the corresponding values of $y$, $x$ and $b$, using the hash function key.
-    \item Apply the Hadamard transform to the remaining registers. In the case where $A_1$ was given $\ket{\psi_y}$, this results in the following state:
+    \item Uncompute the $e$ register. This is possible because, using the hash function key, the value of the $e$ register for any member of the superposition can be computed from its corresponding values of $y$, $x$ and $b$.
+    \item Apply the Hadamard transform to the remaining registers. In the case where $A_1$ was given $\ket{\psi_y}$, this results (up to normalisation) in the following state:
     \begin{align}
-        \sum_d \bigg( \sum_b \alpha_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} \bigg) \ket{d} = \sum_d \bigg( \sum_b \alpha_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x^* \oplus s_{b})} \bigg) \ket{d}
+        \sum_d \bigg( \sum_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} \bigg) \ket{d} = \sum_d \bigg( \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x^* \oplus s_{b})} \bigg) \ket{d}
     \end{align}
-    Not all $d \in \{0,1\}^{n + k}$ will be supported in this superposition (and we will make precise which ones are). In the case where $A_1$ was given $\ket{b^*, x^*, e^*} \ket{F(b^*, x^*, e^*)}$, however, every $d$ will appear in the superposition, because there will be no opportunity for the amplitude of $d$ to cancel.
+    Not all $d \in \{0,1\}^{n + k}$ will be supported in this superposition (and we will make precise which ones are). In the case where $A_1$ was given $\ket{\psi_{\mathrm{meas}}}$, however, every $d$ will appear in the superposition, because there will be no opportunity for the amplitude of $d$ to cancel.
     
-    We now focus on the amplitude of each $d$ in the $\ket{\psi_y}$ case, in order to determine which $d$s will be supported in the superposition after Hadamard. Note, firstly, that we can rewrite the amplitude of $d$ in the following way:
+    Note that, in the $\ket{\psi_y}$ case, we can rewrite the amplitude of $d$ in the following way:
     \begin{align}
-    \begin{split}
-        \sum_d \bigg( \sum_b \alpha_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} \bigg) \ket{d} = \sum_d \bigg( \sum_b \alpha_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x^* \oplus s_{b})} \bigg) \ket{d} \\
-        &= (-1)^{d_2 \cdot x} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot \big( (x - s_{\widetilde{b}}) \oplus x \big)}
-    \end{split}
+        \sum_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} &=
+			\sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x^* \oplus s_{b})} \\
+        &= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot \big( (x^* \oplus s_b) \oplus x^* \big)} \\
+			&= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot s_b} \\
+			&= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{\sum_i b_i \cdot (d_{1, i} \oplus d_2 \cdot s_i)} \\
+			&= (-1)^{d_2 \cdot x^*} \prod_{i = 1}^n \big( 1 + (-1)^{d_{1, i} \oplus d_{2, i} \cdot s_i} \big)
     \end{align}
-    
-    \textbf{Claim.} For every $d_2 \in \{0,1\}^{\ell n}$, there is a $d_2'$ such that, for any binary string $s$, $d_2 \cdot \big( (x - s) \oplus x \big) = d_2' \cdot s$. Furthermore, $d_2'$ is efficiently computable from $d_2$.
-    
-    \textit{Proof.} Set $d'_2$ as follows:
-    \begin{align}
-        d'_2 = d_2 \cdot \big( (x - (11 \cdots 1)) \oplus x \big).
-    \end{align}
-    We show that this choice is correct using linearity, i.e., by showing that, $\forall i, d_{2, i}' \cdot s_i = \big[ d_2 \cdot \big( (x - s) \oplus x \big) \big]_i$.
+(21) is \textit{nonzero} if and only if $d_2 \cdot s_i = d_{1, i}$ for all $i$. Therefore, the only $d$s that will be supported in the superposition after Hadamard are those such that $P(d) = 1$.
+
+	\item Apply $P$ to the superposition of $d$s and measure the result. If $A_1$ was given $\ket{\psi_y}$, this measurement will yield 1 with probability 1. If $A_0$ was given $\ket{\psi_{\mathrm{meas}}}$, the probability that this measurement yields 1 is negligible, because the probability $Pr\Big[ d \in S_0 \: \Big| \: d \stackrel{r}{\leftarrow} \mathbb{F}_2^{n+k} \Big]$ is exponentially small if $k$ is linear in $n$. This completes the proof that $A$ wins the collapsing game with non-negligible probability $1 - \textsf{negl}(n)$.
+\end{itemize}
+
+\subsection{Collision resistance}
+Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ such that $F(b, x, e) = F(b', x', e')$, he can evaluate $x \oplus x'$ and recover $s_{\hat b}$ for some $\hat b$. Therefore, in order to prove that it is impossible to find collisions, we prove that it is impossible to recover any $s_{\hat b} = \bigoplus_i \hat b_is_i$ given the hash function key. We do so through a sequence of hybrids.
+
+\begin{itemize}
+    \item $H_0$: The challenger outputs the key as it is defined in section 4.1.
+    \item $H_1$: Relying upon the security of \textsf{shO}, the challenger swaps $P$ for another subspace membership program that instead checks membership in a random, higher-dimensional subspace $S_1 \supset S_0$. $H_0$ and $H_1$ are indistinguishable by the security of \textsf{shO}.
+    \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
+    \item $H_3$: The challenger outputs $k$ random strings instead of the samples $A\big( L(s_i) \big) + e_i$. It also outputs $S_1$ and $A$ as before.
+
+	  Let $C$ be the following probabilistic algorithm (which takes $S_1$ as argument):
+    \begin{itemize}
+        \item Choose a random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} We repeat the choosing procedure until an $M$ with this property is found.
+        \item Row reduce $M$ until it is in the form $I_k \: | \: \mathcal{S}'$.
+        \item Output $\mathcal{S}'$.
+    \end{itemize}
+
+By the $\textsf{DLWE}(\mathcal{D})$ assumption (\cite{robustness}), where $\mathcal{D}$ is the uniform distribution over the set $\{L(\mathcal{S}) \:|\: \mathcal{S} \leftarrow C(S_1)\}$, no adversary can tell the difference between the samples $A\big( L(s_i) \big) + e_i$ and $k$ random strings. Suppose there were an adversary $A$ who could. We enlist $A$ to build an adversary $B$ who breaks $\textsf{DLWE}(\mathcal{D})$. $B$ receives a random 
+
+We conclude that $H_3$ and $H_2$ are indistinguishable.
+	\item $H_4$: The challenger simply outputs $S_1$. It is clearly impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
 \end{itemize}
 
 \bibliographystyle{alpha}
