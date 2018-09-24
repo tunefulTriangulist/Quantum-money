@@ -172,8 +172,16 @@ Without loss of generality, consider the $(x_0, \ket{\phi_{0}})$ tuple. To pass 
 
 \subsection{Definition of NCH}
 
-Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2^n$ to $\mathbb{Z}_q^n$ such that
+Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2$ to $\mathbb{Z}_q$ such that
+\begin{align}
+	L(b) =
+	\begin{cases}
+		0 & b = 0 \\
+		\frac{q}{2} & b = 1
+	\end{cases}.
+\end{align}
 
+\begin{comment}
 \begin{align}
 	L(x \in \mathbb{F}_2^n) = v \in \mathbb{Z}_q^n = \begin{pmatrix} v_1 \\ \vdots \\ v_n \end{pmatrix},
 	v_i =
@@ -182,8 +190,9 @@ Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2^n$ to $\
 		\frac{q}{2} & x_i = 1
 	\end{cases}.
 \end{align}
+\end{comment}
 
-Note that $L$ is injective.
+When we write $L(x)$, where $x$ is a vector with entries in $\mathbb{F}_2^n$, or $L(M)$, where $M$ is a matrix with entries in $\mathbb{F}_2^n$, we mean the entry-wise application of $L$ to $x$ or to $M$. Note that $L$, in all its forms, is injective.
 
 The non-collapsing hash function is defined as follows:
 \begin{itemize}
@@ -281,7 +290,7 @@ In order to tell whether it has been given $\ket{\psi_{\mathrm{meas}}}$ or $\ket
 			&= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{\sum_i b_i \cdot (d_{1, i} \oplus d_2 \cdot s_i)} \\
 			&= (-1)^{d_2 \cdot x^*} \prod_{i = 1}^n \big( 1 + (-1)^{d_{1, i} \oplus d_{2, i} \cdot s_i} \big)
     \end{align}
-(21) is \textit{nonzero} if and only if $d_2 \cdot s_i = d_{1, i}$ for all $i$. Therefore, the only $d$s that will be supported in the superposition after Hadamard are those such that $P(d) = 1$.
+(22) is \textit{nonzero} if and only if $d_2 \cdot s_i = d_{1, i}$ for all $i$. Therefore, the only $d$s that will be supported in the superposition after Hadamard are those such that $P(d) = 1$.
 
 	\item Apply $P$ to the superposition of $d$s and measure the result. If $A_1$ was given $\ket{\psi_y}$, this measurement will yield 1 with probability 1. If $A_0$ was given $\ket{\psi_{\mathrm{meas}}}$, the probability that this measurement yields 1 is negligible, because the probability $Pr\Big[ d \in S_0 \: \Big| \: d \stackrel{r}{\leftarrow} \mathbb{F}_2^{n+k} \Big]$ is exponentially small if $k$ is linear in $n$. This completes the proof that $A$ wins the collapsing game with non-negligible probability $1 - \textsf{negl}(n)$.
 \end{itemize}
@@ -295,6 +304,8 @@ Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ suc
     \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
     \item $H_3$: The challenger outputs $k$ random strings instead of the samples $A\big( L(s_i) \big) + e_i$. It also outputs $S_1$ and $A$ as before.
 
+We show that this hybrid and the last are indistinguishable by reducing the problem of telling them apart to the problem of decisional LWE with secrets drawn from any distribution $\mathcal{D}$ that has sufficient entropy (\cite{robustness}). Following \cite{robustness}, we denote this problem by \textsf{DLWE}($\mathcal{D}$).
+
 	  Let $C$ be the following probabilistic algorithm (which takes $S_1$ as argument):
     \begin{itemize}
         \item Choose a random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} We repeat the choosing procedure until an $M$ with this property is found.
@@ -302,9 +313,7 @@ Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ suc
         \item Output $\mathcal{S}'$.
     \end{itemize}
 
-By the $\textsf{DLWE}(\mathcal{D})$ assumption (\cite{robustness}), where $\mathcal{D}$ is the uniform distribution over the set $\{L(\mathcal{S}) \:|\: \mathcal{S} \leftarrow C(S_1)\}$, no adversary can tell the difference between the samples $A\big( L(s_i) \big) + e_i$ and $k$ random strings. Suppose there were an adversary $A$ who could. We enlist $A$ to build an adversary $B$ who breaks $\textsf{DLWE}(\mathcal{D})$. $B$ receives a random 
-
-We conclude that $H_3$ and $H_2$ are indistinguishable.
+By the $\textsf{DLWE}(\mathcal{D})$ assumption, where $\mathcal{D}$ is the uniform distribution over the set $\{L(\mathcal{S}'^T) \:|\: \mathcal{S}' \leftarrow C(S_1)\}$, no adversary can tell the difference between the samples $A\big( L(s_i) \big) + e_i$ and $k$ random strings. Suppose there were an adversary $A$ who could. We enlist $A$ to build an adversary $B$ who breaks $\textsf{DLWE}(\mathcal{D})$. $B$ receives a random LWE sample $\Big(A, A\big( L(\mathcal{S}'^T) \big) + E \Big)$, where $A$ is an $m \times n$ matrix, $L(\mathcal{S}'^T)$ is an $n \times k$ matrix, and $E$ is an $m \times k$ matrix; $B$ also knows the distribution $\mathcal{D}$, which means that it knows $S_1$ and can provide $A$ with a description of it. Notice that the columns of $B$'s sample constitute $k$ vectors of the form $A\big( L(s_i) \big) + e_i$. Therefore, $B$ gives its sample to $A$ column-wise, and outputs whatever $A$ outputs. If $A$ can distinguish between $H_3$ and $H_2$, then $B$ can break $\textsf{DLWE}(\mathcal{D})$. We conclude that $H_3$ and $H_2$ are indistinguishable.
 	\item $H_4$: The challenger simply outputs $S_1$. It is clearly impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
 \end{itemize}
 
