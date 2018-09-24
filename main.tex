@@ -170,7 +170,7 @@ Without loss of generality, consider the $(x_0, \ket{\phi_{0}})$ tuple. To pass 
 
 \section{NCH from iO}
 
-\subsection{Definition of NCH}
+\subsection{Definition of NCH function}
 
 Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2$ to $\mathbb{Z}_q$ such that
 \begin{align}
@@ -240,7 +240,7 @@ The challenger then measures either the entire state or else the output register
 		\end{align}
 		To show that it has this form, we prove the following lemma.
 		
-		\textbf{Lemma.} Fix a $y$. For each $b \in \{0,1\}^k$, there is exactly one $(x', e')$ such that $F(b, x', e') = y$, and it has the form $(x' = x^* \oplus s_b, e' = e^* - e_b)$, where $s_b = \bigoplus_i b_i s_i$, $e_b = \sum_i b_i e_i$, and ($x^*, e^*$) is the unique solution to the equation $A\big( L(x^*) \big) + e^* = y$.
+		\textbf{Lemma.} Fix a $y$. For each $b \in \{0,1\}^k$, there is exactly one $(x', e')$ with $x' \in \mathbb{F}_2^n, e' \in \mathbb{Z}_q^m$ such that $F(b, x', e') = y$, and it has the form $(x' = x^* \oplus s_b, e' = e^* - e_b)$, where $s_b = \bigoplus_i b_i s_i$, $e_b = \sum_i b_i e_i$, and ($x^*, e^*$) is the unique solution to the equation $A\big( L(x^*) \big) + e^* = y$.
 
 		\textit{Proof.} Suppose that a $y$ has been measured. Note that this $y$ must be in the form $A\big( L(x^*) \big) + e^*$ for some $x^* \in \mathbb{F}_2^n$, and some $e^* \in \mathbb{Z}_q^m$ with sufficiently small magnitude. We recall that $L$ is injective, apply the inversion theorem (Theorem 5.1 of \cite{MP11}), and conclude that $(x^*, e^*)$ is unique. Given that this is so, the task of finding collisions becomes that of finding solutions $(b, x', e')$ to the following equation:
 		\begin{align}
@@ -308,7 +308,7 @@ We show that this hybrid and the last are indistinguishable by reducing the prob
 
 	  Let $C$ be the following probabilistic algorithm (which takes $S_1$ as argument):
     \begin{itemize}
-        \item Choose a random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} We repeat the choosing procedure until an $M$ with this property is found.
+        \item Choose a random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} Repeat the choosing procedure until an $M$ with this property is found.
         \item Row reduce $M$ until it is in the form $I_k \: | \: \mathcal{S}'$.
         \item Output $\mathcal{S}'$.
     \end{itemize}
