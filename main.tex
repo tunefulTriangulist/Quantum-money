@@ -5,6 +5,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{amsthm}
 \usepackage{braket}
 \usepackage{graphicx}
 \usepackage{verbatim}
@@ -21,6 +22,9 @@
 }
 
 \newcommand{\stamp}{\vcenter{\hbox{\includegraphics[height=1em]{rubberstamp}}}}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
 
 \begin{document}
 
@@ -168,6 +172,8 @@ Without loss of generality, consider the $(x_0, \ket{\phi_{0}})$ tuple. To pass 
     \item One curious property of this NCH-based construction for tokens is that the signatures $\sigma$ it produces are quantum, while \cite{tokens}'s signatures were classical. In consequence, our construction loses some of the properties which \cite{tokens} considered desirable, such as the ability to convert quantum money into `classical cheques' which could be sent over classical channels. The sacrifice is not a fruitless one, however: since our scheme is based on non-collapsing hash functions, we also acquire the properties of `collision-free quantum money' which \cite{zha17} considered desirable, such as the ability to ensure that even the bank cannot forge quantum money (or signing tokens).
 \end{itemize}
 
+\clearpage
+
 \section{NCH from iO}
 
 \subsection{Definition of NCH function}
@@ -284,7 +290,7 @@ is negligible in $n$. In other words,
 		\end{align}
 \end{itemize}
 
-In the following analysis, therefore, we assume that $\ket{\psi_y}$ is of the above form.
+In the following analysis, therefore, we assume $\ket{\psi_y}$ is of the above form.
 
 In order to tell whether it has been given $\ket{\psi_{\mathrm{meas}}}$ or $\ket{\psi_y}$, $A_1$ performs the following procedure.
 \begin{itemize}
@@ -306,7 +312,7 @@ In order to tell whether it has been given $\ket{\psi_{\mathrm{meas}}}$ or $\ket
     \end{align}
 (22) is \textit{nonzero} if and only if $d_2 \cdot s_i = d_{1, i}$ for all $i$. Therefore, the only $d$s that will be supported in the superposition after Hadamard are those such that $P(d) = 1$.
 
-	\item Apply $P$ to the superposition of $d$s and measure the result. If $A_1$ was given $\ket{\psi_y}$, this measurement will yield 1 with probability 1. If $A_0$ was given $\ket{\psi_{\mathrm{meas}}}$, the probability that this measurement yields 1 is negligible, because the probability $Pr\Big[ d \in S_0 \: \Big| \: d \stackrel{r}{\leftarrow} \mathbb{F}_2^{n+k} \Big]$ is exponentially small if $k$ is linear in $n$. This completes the proof that $A$ wins the collapsing game with non-negligible probability $1 - \textsf{negl}(n)$.
+	\item Apply $P$ to the superposition of $d$s and measure the result. If $A_1$ was given $\ket{\psi_y}$, this measurement will yield 1 with probability 1. If $A_0$ was given $\ket{\psi_{\mathrm{meas}}}$, the probability that this measurement yields 1 is negligible, because [the state $\ket{\psi_{\mathrm{meas}}}$ assumes after Hadamard is negligibly close to the uniform distribution, and] the probability $Pr\Big[ d \in S_0 \: \Big| \: d \stackrel{r}{\leftarrow} \mathbb{F}_2^{n+k} \Big]$ is exponentially small if $k$ is linear in $n$. This completes the proof that $A$ wins the collapsing game with non-negligible probability $1 - \textsf{negl}(n)$.
 \end{itemize}
 
 \subsection{Collision resistance}
@@ -321,18 +327,38 @@ Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ suc
 We show that this hybrid and the last are indistinguishable by reducing the problem of telling them apart to the problem of decisional LWE with secrets drawn from any distribution $\mathcal{D}$ that has sufficient entropy (\cite{robustness}). Following \cite{robustness}, we denote this problem by \textsf{DLWE}($\mathcal{D}$).
 
 	  Let $C$ be the following probabilistic algorithm:
-    \begin{itemize}
-        \item Choose a random $k \times (n+k)$ matrix $M$. On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} Repeat the choosing procedure until an $M$ with this property is found.
-        \item Row reduce $M$ until it is in the form $I_k \: | \: \mathcal{S}'$.
-        \item Output $\mathcal{S}'$.
-    \end{itemize}
+    \begin{enumerate}
+        \item Choose a uniformly random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. Put $M$ in reduced row echelon form. Denote the row-reduced version of $M$ by $\hat M$.
+			\item If the first $k$ columns of $\hat M$ are the $k$-dimensional identity matrix, continue. Otherwise, repeat step 1.
+\begin{comment}
+On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} Repeat the choosing procedure until an $M$ with this property is found.
+\end{comment}
+        \item If $\hat M$ made it past step 2, then it has the form $I_k \:|\: \mathcal{S}'$ for some $k \times n$ matrix $\mathcal{S}'$. Output $\mathcal{S}'$.
+    \end{enumerate}
 
-Because reduced row echelon form is unique, there are as many matrices which row reduce to $I_k \:|\: \mathcal{S}'$ (for some $\mathcal{S}'$) as there are arbitrary matrices $\mathcal{S}'$ in $\mathbb{F}_2^{kn}$. Since $M$ is chosen uniformly at random from the set of all matrices which row reduce to $I_k \:|\: \mathcal{S}'$, the output of $C$ has the same min-entropy as the uniform distribution over the set $\big\{ \mathcal{S}' \:\big|\: \mathcal{S}' \in \mathbb{F}_2^{kn} \big\}$.
+Note that $C$ samples uniformly at random from the matrices $M$ satisfying the following two criteria:
+\begin{enumerate}
+	\item The kernel of $M$ is in $S_1$;
+	\item The first $k$ columns of $M$ are linearly independent.
+\end{enumerate}
 
-Now, consider a modification of $C$ which takes $S_1$ as argument and chooses the matrix $M$ from all $k \times (n+k)$ matrices whose kernels are in $S_1$. Since $S_1$ is a random subspace, the condition that $\mathrm{ker}M$ is in $S_1$ ought to be independent of the condition that $M$'s first $k$ columns are linearly independent. Suppose that $S_1$ is of dimension $n+k - \ell$. The odds of choosing a random $n$-dimensional space (in this case, the kernel of $M$) and landing in the particular $(n+k-\ell)$-dimensional space $S_1$ are about $2^{-\ell n}$. We conclude that the size of the set $\big\{ \mathcal{S}' \:\big|\: \mathrm{ker}(I_k \:|\: \mathcal{S}') \in S_1, \mathcal{S}' \in \mathbb{F}_2^{kn} \big\}$ is  $2^{-\ell n} \times \Big| \big\{ \mathcal{S}' \:\big|\: \mathcal{S}' \in \mathbb{F}_2^{kn} \big\} \Big|$. The latter is of size $2^{kn}$, so the former is of size $2^{kn - \ell n}$. We conclude that the output of $C$ has $n(k - \ell)$ bits of min-entropy.
+For each $\hat M = I_k \:|\: \mathcal{S}'$, the maximum number of matrices $M$ (in $C$'s set of potential samples) which row reduce to $\hat M$ is given by
+\begin{align}
+	(2^k - 1)\cdots(2^k - 2^{k-1}) \leq 2^{k^2}.
+\end{align}
+
+The left-hand-side is an expression for the number of ways one can choose a basis for a $k$-dimensional space over $\mathbb{F}_2$. Since matrices which have the same RREF always have the same kernel, their rows can be interpreted as different choices of basis for the perp space of that kernel.
+
+We prove the following lemma in order to show that the output of $C$ has sufficient min-entropy to serve as the distribution $\mathcal{D}$ in the \textsf{DLWE}($\mathcal{D}$) problem.
+
+\begin{lemma}
+Let $S_1$ be $(n+k - \ell)$ dimensional, where $0 < \ell < k$. Under certain conditions on $n$, $k$ and $\ell$, there are at least exponentially many matrices $M$ which the first step of $C$ could sample.
+\end{lemma}
+
+Note that, in step 1, $C$ effectively samples at random from the uniform distribution over all dimension-$n$ subspaces contained in $S_1$. (There is a bijection between these subspaces and the $\hat M$s, because a single matrix cannot have two kernels, and two matrices in reduced row echelon form have the same kernel if and only if they are the same matrix.) We argue that the effect of the second step is to eliminate about $\frac{3}{4}$ of these $n$-dimensional subspaces from consideration, leaving behind a uniform distribution over those subspaces which remain.
 
 By the $\textsf{DLWE}(\mathcal{D})$ assumption, where $\mathcal{D}$ is the uniform distribution over the set $\{L(\mathcal{S}'^T) \:|\: \mathcal{S}' \leftarrow C(S_1)\}$, no adversary can tell the difference between the samples $A\big( L(s_i) \big) + e_i$ and $k$ random strings. Suppose there were an adversary $A$ who could. We enlist $A$ to build an adversary $B$ who breaks $\textsf{DLWE}(\mathcal{D})$. $B$ receives a random LWE sample $\Big(A, A\big( L(\mathcal{S}'^T) \big) + E \Big)$, where $A$ is an $m \times n$ matrix, $L(\mathcal{S}'^T)$ is an $n \times k$ matrix, and $E$ is an $m \times k$ matrix; $B$ also knows the distribution $\mathcal{D}$, which means that it knows $S_1$ and can provide $A$ with a description of it. Notice that the columns of $B$'s sample constitute $k$ vectors of the form $A\big( L(s_i) \big) + e_i$. Therefore, $B$ gives its sample to $A$ column-wise, and outputs whatever $A$ outputs. If $A$ can distinguish between $H_3$ and $H_2$, then $B$ can break $\textsf{DLWE}(\mathcal{D})$. We conclude that $H_3$ and $H_2$ are indistinguishable.
-	\item $H_4$: The challenger simply outputs $S_1$. It is clearly impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
+	\item $H_4$: The challenger simply outputs $S_1$. It is impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
 \end{itemize}
 
 \bibliographystyle{alpha}
