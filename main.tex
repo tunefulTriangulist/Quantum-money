@@ -12,6 +12,7 @@
 \usepackage{hyperref}
 \usepackage{multirow}
 \usepackage{mathtools}
+\usepackage{cleveref}
 \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
 \hypersetup{
     colorlinks=true,
@@ -23,8 +24,9 @@
 
 \newcommand{\stamp}{\vcenter{\hbox{\includegraphics[height=1em]{rubberstamp}}}}
 
-\newtheorem{lemma}{Lemma}
-\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{claim}{Claim}[section]
 
 \begin{document}
 
@@ -177,8 +179,20 @@ Without loss of generality, consider the $(x_0, \ket{\phi_{0}})$ tuple. To pass 
 \section{NCH from iO}
 
 \subsection{Definition of NCH function}
+\label{section:defnch}
 
-Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2$ to $\mathbb{Z}_q$ such that
+Let $k, n, m$ be positive integers linear in $\lambda$, with $k < n < m$. Let $q$ be a positive even integer which satisfies the following two conditions.
+\begin{itemize}
+	\item q is superpolynomial in $\lambda$.
+	\item Let the bound constant $B_P$ be equal to $\frac{q}{4C_T \sqrt{mn \log q}}$ (where $C_T$ is a universal constant). Let $B_V$ be a bound such that
+		\begin{itemize}
+			\item $B_V < B_P$;
+			\item the ratio $\frac{B_P}{B_V}$ is superpolynomial in $\lambda$.
+		\end{itemize}
+		We require $q$ to be large enough so that $2\sqrt{n} < B_V < B_P$.
+\end{itemize}
+
+Let $L$ be a map from $\mathbb{F}_2$ to $\mathbb{Z}_q$ such that
 \begin{align}
 	L(b) =
 	\begin{cases}
@@ -198,22 +212,30 @@ Let $q$ be a positive even integer. Let $L$ be a map from $\mathbb{F}_2$ to $\ma
 \end{align}
 \end{comment}
 
-When we write $L(x)$, where $x$ is a vector with entries in $\mathbb{F}_2^n$, or $L(M)$, where $M$ is a matrix with entries in $\mathbb{F}_2^n$, we mean the entry-wise application of $L$ to $x$ or to $M$. Note that $L$, in all its forms, is injective.
+When we write $L(x)$, where $x$ is a vector with entries in $\mathbb{F}_2$, or $L(M)$, where $M$ is a matrix with entries in $\mathbb{F}_2$, we mean the entry-wise application of $L$ to $x$ or to $M$. Note that $L$, in all its forms, is injective.
 
 The non-collapsing hash function is defined as follows:
 \begin{itemize}
-    \item \textsf{key-gen}: Generates the following constants which define the hash function.
+    \item \textsf{key-gen}$(1^\lambda)$: Generates the following constants which define the hash function.
     \begin{itemize}
-        \item A randomly-chosen $m \times n$ LWE matrix, $A$, whose entries are in $\mathbb{Z}_q$;
-        \item $k$ $n$-bit binary strings $s_1, \cdots, s_k$, which represent $k$ secrets.
+        \item An $m \times n$ LWE matrix, $A$, chosen uniformly at random, whose entries are in $\mathbb{Z}_q$;
+        \item $k$ $n$-bit binary strings $s_1, \ldots, s_k$, chosen uniformly at random, which represent $k$ secrets.
     \end{itemize}
+
     The hash function key that \textsf{key-gen} outputs consists of the following:
     \begin{itemize}
 			\item The matrix $A$.
-			\item $k$ LWE samples $A\big( L(s_i) \big) + e_i$, for $i$ in $1, \cdots, k$. $e_i$ are randomly chosen error vectors in $\mathbb{Z}_q^m$ with sufficiently small bounded magnitude.
-        \item A program $P$. Let $\mathcal{S}$ denote the $k \times n$ matrix over $\mathbb{F}_2$ whose rows are $s_1, \cdots, s_k$. $P(\cdot)$ is the obfuscation under \textsf{shO} of the subspace membership oracle for the subspace ker($I_k \: | \: \mathcal{S}$), where $I_k$ is the $k \times k$ identity matrix, and $I_k \: | \: \mathcal{S}$ is the $k \times (n+k)$ block matrix obtained by joining $I_k$ and $\mathcal{S}$ together, with $I_k$ on the left and $\mathcal{S}$ on the right. For convenience, we denote this subspace (ker($I_k \: | \: \mathcal{S}$)) by $S_0$.
+			\item $k$ LWE samples $A\big( L(s_i) \big) + e_i$, for $i$ in $1, \ldots, k$. $e_i$ are randomly chosen error vectors in $\mathbb{Z}_q^m$ whose magnitudes satisfy $||e_i|| < \frac{\sqrt{m}}{k}B_V$.
+        \item A program $P$. Let $\mathcal{S}$ denote the $k \times n$ matrix over $\mathbb{F}_2$ whose rows are $s_1, \ldots, s_k$. $P(\cdot)$ is the obfuscation under \textsf{shO} of the subspace membership oracle for the subspace ker($I_k \: | \: \mathcal{S}$), where $I_k$ is the $k \times k$ identity matrix, and $I_k \: | \: \mathcal{S}$ is the $k \times (n+k)$ block matrix obtained by joining $I_k$ and $\mathcal{S}$ together, with $I_k$ on the left and $\mathcal{S}$ on the right. For convenience, we denote this subspace (ker($I_k \: | \: \mathcal{S}$)) by $S_0$.
     \end{itemize}
-    \item Evaluation: Let $s_b = \bigoplus_i b_i s_i$, where $b_i$ denotes the $i$th bit of $b$. Similarly, let $e_b = \sum_i b_i e_i$. (The sum in the latter uses addition modulo $q$.) $F(b, x, e) = A\big( L(x) \big) + e + A\big( L(s_b) \big) + e_b$. $F$ can be evaluated publicly using the hash function key.
+    \item Evaluation: Let $s_b = \bigoplus_i b_i s_i$, where $b_i$ denotes the $i$th bit of $b$. Similarly, let $e_b = \sum_i b_i e_i$. (The sum in the latter uses addition modulo $q$.)
+
+Let $(b, x, e)$ be in $\mathbb{F}_2^k \times \mathbb{F}_2^n \times \mathcal{E}$, where $\mathcal{E} = \big\{e \in \mathbb{Z}_q^m \: \big| \: ||e|| \leq \sqrt{m}B_P \big\}$. Define $F : \mathbb{F}_2^k \times \mathbb{F}_2^n \times \mathcal{E} \rightarrow \mathbb{Z}_q^m$ by
+\begin{align}
+F(b, x, e) = A\big( L(x) \big) + e + A\big( L(s_b) \big) + e_b.
+\end{align}
+
+$F$ can be evaluated publicly using the hash function key: the user computes $A\big( L(x) \big) + e$ for himself, and then, for $i = 1,\ldots,k$, adds the sample $A\big( L(s_i) \big) + e_i$ into the output register (modulo $q$) iff the $i$th bit of $b$ is 1.
 \end{itemize}
 
 \subsection{Non-collapsing}
@@ -240,15 +262,16 @@ The challenger then measures either the entire state or else the output register
 
 \begin{itemize}
 		\item $\ket{\psi_{\mathrm{meas}}} = \ket{b, x, e} \ket{F(b, x, e)}$ for some $(b, x, e)$.
-     \item $\ket{\psi_y}$ for some $y$. We claim that $\ket{\psi_y}$ has (up to normalisation) the specific form 
+     \item $\ket{\psi_y}$ for some $y$ in the image of $F$. We claim that $\ket{\psi_y}$ is negligibly close to the state
 		\begin{align}
-			\ket{\psi_y} = \sum_b \sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)} \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
+			\alpha \sum_b \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}
 		\end{align}
-		To show that it has this form, we prove the following lemma.
-		
-		\textbf{Lemma.} Fix a $y$. For each $b \in \{0,1\}^k$, there is exactly one $(x', e')$ with $x' \in \mathbb{F}_2^n, e' \in \mathbb{Z}_q^m$ such that $F(b, x', e') = y$, and it has the form $(x' = x^* \oplus s_b, e' = e^* - e_b)$, where $s_b = \bigoplus_i b_i s_i$, $e_b = \sum_i b_i e_i$, and ($x^*, e^*$) is the unique solution to the equation $A\big( L(x^*) \big) + e^* = y$.
 
-		\textit{Proof.} Suppose that a $y$ has been measured. Note that this $y$ must be in the form $A\big( L(x^*) \big) + e^*$ for some $x^* \in \mathbb{F}_2^n$, and some $e^* \in \mathbb{Z}_q^m$ with sufficiently small magnitude. We recall that $L$ is injective, apply the inversion theorem (Theorem 5.1 of \cite{MP11}), and conclude that $(x^*, e^*)$ is unique. Given that this is so, the task of finding collisions becomes that of finding solutions $(b, x', e')$ to the following equation:
+		for some global normalisation factor $\alpha$, and for some $(x^* \in \mathbb{F}_2^n, e^* \in \mathbb{Z}_q^m)$. To show that $\ket{\psi_y}$ has this form, we prove lemmas \ref{lemma:psiyform} and \ref{lemma:globalnorm}.
+		
+		\begin{lemma} \label{lemma:psiyform} Fix a $y$ in the image of $F$. For each $b \in \{0,1\}^k$, there is exactly one $(x', e')$ with $x' \in \mathbb{F}_2^n, e' \in \mathbb{Z}_q^m$ such that $F(b, x', e') = y$, and it has the form $(x' = x^* \oplus s_b, e' = e^* - e_b)$, where $s_b = \bigoplus_i b_i s_i$, $e_b = \sum_i b_i e_i$, and $(x^*, e^*)$ is the unique solution to the equation $A\big( L(x^*) \big) + e^* = y$. \end{lemma}
+
+		\begin{proof} Suppose that a $y$ has been measured. Note that this $y$ must be in the form $A\big( L(x^*) \big) + e^*$ for some $x^* \in \mathbb{F}_2^n$, and some $e^* \in \mathbb{Z}_q^m$ with magnitude $||e^*|| \leq \frac{q}{2C_T\sqrt{n \log q}}$. We recall that $L$ is injective, apply the inversion theorem (Theorem 5.1 of \cite{MP11}), and conclude that $(x^*, e^*)$ is unique. Given that this is so, the task of finding collisions becomes that of finding solutions $(b, x', e')$ to the following equation:
 		\begin{align}
 			A\big( L(x^*) \big) + e^* = A\big( L(x') \big) + e' + A\big( L(s_{b}) \big) + e_{b}.
 		\end{align}
@@ -258,81 +281,192 @@ The challenger then measures either the entire state or else the output register
 			\implies A\big( L(x') \big) + e' &= A\big( L(x^* \oplus s_{b}) \big) + e^* - e_{b}.
 		\end{align}
 
-		Applying the inversion theorem once again, we conclude that
+		Note that $||e^* - e_b|| \leq \frac{3}{4}\frac{q}{C_T\sqrt{n \log q}}$. Applying the inversion theorem once again, we conclude that
 		\begin{align}
 			L(x') &= L(x^* \oplus s_{b}) \\
 			\implies x' &= x^* \oplus s_{b}; \\
 			e' &= e^* - e_{b}.
 		\end{align}
 
-		For each $b \in \{0,1\}^k$, there will be exactly one $(x', e')$ such that the pair of equations above are satisfied, and $x'$ and $e'$ have the form we claimed they would have. The lemma is thus proved.
+		For each $b \in \{0,1\}^k$, there will be exactly one $(x', e')$ such that the pair of equations above are satisfied, and $x'$ and $e'$ have the form we claimed they would have. The lemma is thus proved. \end{proof}
 
-		Given the lemma, it is clear that (up to normalisation)
+\begin{lemma} \label{lemma:globalnorm}
+$\ket{\psi_y}$ is negligibly close in trace distance to a state of the form
+\begin{align}
+\alpha \sum_b \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y},
+\end{align}
+where $\alpha$ is a global normalisation factor.
+\end{lemma}
+\begin{proof}
+		Given \cref{lemma:psiyform}, it is clear that (up to normalisation)
 		\begin{align}
 			\ket{\psi_y} = \sum_b \sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)} \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
 		\end{align}
 
-		If we require that the maximum amplitude of $e_b$ is small compared to the Gaussian parameter of the distribution $D$, $\sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)}$ should be approximately the same for all $b$. More precisely, Lemma 34 in \cite{randomness} guarantees that, if we choose $e_i$ so that $||e_b|| \leq \sqrt{m} B_V$ for all $e_b$---and $B_V$ is a bound such that the ratio $\frac{B_P}{B_V}$ is superpolynomial in $n$---we have
-
+		If we require that the maximum amplitude of $e_b$ is small compared to the Gaussian parameter of the distribution $D_{\mathbb{Z}_q^m, B_P}$, $\sqrt{D_{\mathbb{Z}_q^m, B_P}(e^* - e_b)}$ should be approximately the same for all $b$. More precisely, Lemma 34 in \cite{randomness} guarantees that, if we choose $e_i$ so that $||e_b|| \leq \sqrt{m} B_V$ for all $e_b$---and $B_V$ is a bound such that the ratio $\frac{B_P}{B_V}$ is superpolynomial in $\lambda$---we have
 \begin{align}
 	H^2\big( D_{\mathbb{Z}_q^m, B_P}(e^*), D_{\mathbb{Z}_q^m, B_P}(e^* - e_b) \big) \leq 1 - e^{-\frac{2\pi m B_V}{B_P}},
 \end{align}
 
-where $H^2$ is the Hellinger distance. Note that the right-hand-side is negligible in $n$. It follows that the trace distance between the state $\ket{\psi_y}$ and the state
-
+where $H^2$ is the Hellinger distance. Note that the right-hand-side is negligible in $\lambda$. It follows that the trace distance between the state $\ket{\psi_y}$ and the state
 		\begin{align}
-			\sum_b \sqrt{D_{\mathbb{Z}_q^m, B_P}(e^*)} \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
+			\sum_b \sqrt{D_{\mathbb{Z}_q^m, B_P}(e^*)} \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}
 		\end{align}
 
-is negligible in $n$. In other words,
+is negligible in $\lambda$. In other words,
 		\begin{align}
 			\ket{\psi_y} \approx \alpha \sum_b \ket{b, x^* \oplus s_b, e^* - e_b} \ket{y}.
 		\end{align}
+\end{proof}
 \end{itemize}
 
 In the following analysis, therefore, we assume $\ket{\psi_y}$ is of the above form.
 
 In order to tell whether it has been given $\ket{\psi_{\mathrm{meas}}}$ or $\ket{\psi_y}$, $A_1$ performs the following procedure.
 \begin{itemize}
-    \item Uncompute the $e$ register. This is possible because, using the hash function key, the value of the $e$ register for any member of the superposition can be computed from its corresponding values of $y$, $x$ and $b$.
+    \item Uncompute the register containing the errors. This is possible because, for any $(b, x, e, y)$, $e = y - A\big( L(x) \big) - \big( A\big( L(s_b) \big) + e_b \big)$---so that, using the hash function key, the value of $e$ for any member of the superposition can be computed from its corresponding values of $y$, $x$ and $b$.
     \item Apply the Hadamard transform to the remaining registers. In the case where $A_1$ was given $\ket{\psi_y}$, this results (up to normalisation) in the following state:
     \begin{align}
-        \sum_d \bigg( \sum_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} \bigg) \ket{d} = \sum_d \bigg( \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x^* \oplus s_{b})} \bigg) \ket{d}
+        \sum_d \bigg( \sum_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} \bigg) \ket{d}
     \end{align}
-    Not all $d \in \{0,1\}^{n + k}$ will be supported in this superposition (and we will make precise which ones are). In the case where $A_1$ was given $\ket{\psi_{\mathrm{meas}}}$, however, every $d$ will appear in the superposition, because there will be no opportunity for the amplitude of $d$ to cancel.
-    
-    Note that, in the $\ket{\psi_y}$ case, we can rewrite the amplitude of $d$ in the following way:
+
+    Not all $d \in \{0,1\}^{n + k}$ will be supported in this superposition (and we will make precise which ones are). In the case where $A_1$ was given $\ket{\psi_{\mathrm{meas}}}$, however, all $d$s in $\mathbb{F}_2^{n+k}$ will appear in the superposition, and the magnitude of each $d$'s amplitude will be the same.
+
+\begin{lemma}
+An $(n+k)$-bit string $d$ is supported in the superposition $H^{\otimes (n+k)}\ket{\psi_y}$ if and only if P(d) = 1.
+\end{lemma}
+\begin{proof}
+    Let $d_1$ be the first $k$ bits of $d$, and let $d_2$ be the last $n$ bits of $d$. Note that, in the $\ket{\psi_y}$ case, we can rewrite the amplitude of each $d$ in the following way:
     \begin{align}
         \sum_b (-1)^{d \cdot (b \: || \: x^* \oplus s_b)} &=
 			\sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot (x^* \oplus s_{b})} \\
         &= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot \big( (x^* \oplus s_b) \oplus x^* \big)} \\
 			&= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{d_1 \cdot b} (-1)^{d_2 \cdot s_b} \\
 			&= (-1)^{d_2 \cdot x^*} \sum_b (-1)^{\sum_i b_i \cdot (d_{1, i} \oplus d_2 \cdot s_i)} \\
-			&= (-1)^{d_2 \cdot x^*} \prod_{i = 1}^n \big( 1 + (-1)^{d_{1, i} \oplus d_{2, i} \cdot s_i} \big)
+			&= (-1)^{d_2 \cdot x^*} \prod_{i = 1}^n \big( 1 + (-1)^{d_{1, i} \oplus d_{2, i} \cdot s_i} \big) \label{magicproduct}
     \end{align}
-(22) is \textit{nonzero} if and only if $d_2 \cdot s_i = d_{1, i}$ for all $i$. Therefore, the only $d$s that will be supported in the superposition after Hadamard are those such that $P(d) = 1$.
+If, for any $i$, $d_2 \cdot s_i \oplus d_{1, i} = 1$, then one of the terms in the product in \eqref{magicproduct} will be zero, and the $d$ under consideration will vanish from the superposition $H^{\otimes (n+k)}\ket{\psi_y}$. In other words, the amplitude of a given string $d$ is \textit{nonzero} if and only if $d_2 \cdot s_i = d_{1, i}$ for all $i$. Recall that $P$ tests exactly this condition for the $d$ that it is given as input. Therefore, the only $d$s that will be supported in the superposition $H^{\otimes (n+k)}\ket{\psi_y}$ are those such that $P(d) = 1$.
+\end{proof}
 
-	\item Apply $P$ to the superposition of $d$s and measure the result. If $A_1$ was given $\ket{\psi_y}$, this measurement will yield 1 with probability 1. If $A_0$ was given $\ket{\psi_{\mathrm{meas}}}$, the probability that this measurement yields 1 is negligible, because [the state $\ket{\psi_{\mathrm{meas}}}$ assumes after Hadamard is negligibly close to the uniform distribution, and] the probability $Pr\Big[ d \in S_0 \: \Big| \: d \stackrel{r}{\leftarrow} \mathbb{F}_2^{n+k} \Big]$ is exponentially small if $k$ is linear in $n$. This completes the proof that $A$ wins the collapsing game with non-negligible probability $1 - \textsf{negl}(n)$.
+	\item Apply $P$ to the superposition of $d$s and measure the result. If $A_1$ was given $\ket{\psi_y}$, this measurement will yield 1 with probability 1. If $A_0$ was given $\ket{\psi_{\mathrm{meas}}}$, the probability that this measurement yields 1 is negligible, because the probability $Pr\Big[ d \in S_0 \: \Big| \: d \stackrel{r}{\leftarrow} \mathbb{F}_2^{n+k} \Big]$ is exponentially small if $k$ is linear in $n$. This completes the proof that $A$ wins the collapsing game with non-negligible probability $1 - \textsf{negl}(n)$.
 \end{itemize}
 
 \subsection{Collision resistance}
-Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ such that $F(b, x, e) = F(b', x', e')$, he can evaluate $x \oplus x'$ and recover $s_{\hat b}$ for some $\hat b$. Therefore, in order to prove that it is impossible to find collisions, we prove that it is impossible to recover any $s_{\hat b} = \bigoplus_i \hat b_is_i$ given the hash function key. We do so through a sequence of hybrids.
+\begin{lemma}
+Let $\ell$ be a positive integer, and let $n$ and $k$ be the same as they were in \cref{section:defnch}. Under the following conditions on $n, k, \ell$, $F$ is collision resistant.
+\begin{enumerate}
+	\item $n, k, \ell$ are linear in $\lambda$,
+	\item $0 < \ell < k < n$,
+	\item $\frac{k}{\ell} \leq \frac{n}{k}$,
+	\item $k \ell > 2$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ such that $F(b, x, e) = F(b', x', e')$, he can evaluate $x \oplus x'$ and recover $s_{\hat b}$ for some $\hat b$. Therefore, in order to prove that it is impossible to find collisions for $F$, we prove that it is impossible to recover any $s_{\hat b} = \bigoplus_i \hat b_is_i$ given the hash function key. We do so through a sequence of hybrids.
 
 \begin{itemize}
-    \item $H_0$: The challenger outputs the key as it is defined in section 4.1.
-    \item $H_1$: Relying upon the security of \textsf{shO}, the challenger swaps $P$ for another subspace membership program that instead checks membership in a random, higher-dimensional subspace $S_1 \supset S_0$. $H_0$ and $H_1$ are indistinguishable by the security of \textsf{shO}.
+    \item $H_0$: The challenger outputs the key as it is defined in \cref{section:defnch}.
+    \item $H_1$: Relying upon the security of \textsf{shO}, the challenger swaps $P$---which checks membership in the $n$-dimensional subspace $S_0$---for another subspace membership program that instead checks membership in a random, $(n+\ell)$-dimensional subspace $S_1 \supset S_0$ (with $0 < \ell < k$). $H_0$ and $H_1$ are computationally indistinguishable by the security of \textsf{shO}.
     \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
-    \item $H_3$: The challenger outputs $k$ random strings instead of the samples $A\big( L(s_i) \big) + e_i$. It also outputs $S_1$ and $A$ as before.
+    \item $H_3$: The challenger outputs $k$ uniformly random strings instead of the samples $A\big( L(s_i) \big) + e_i$. It also outputs $S_1$ and $A$ as before.
 
 We show that this hybrid and the last are indistinguishable by reducing the problem of telling them apart to the problem of decisional LWE with secrets drawn from any distribution $\mathcal{D}$ that has sufficient entropy (\cite{robustness}). Following \cite{robustness}, we denote this problem by \textsf{DLWE}($\mathcal{D}$).
 
+Let $C$ be the uniform distribution over the set $\big\{ \mathcal{S}' \:\big|\: \mathrm{ker}(I_k \:|\: \mathcal{S}') \in S_1, \mathcal{S}' \in \mathbb{F}_2^{nk} \big\}$. We prove \cref{lemma:expmany} in order to show that $C$ has sufficient min-entropy to serve as the distribution $\mathcal{D}$ in the \textsf{DLWE}($\mathcal{D}$) problem.
+
+\begin{lemma}
+\label{lemma:expmany}
+Let $S_1$ be $(n+\ell)$ dimensional, where $0 < \ell < k$. Under the following conditions on $n$, $k$ and $\ell$, there are at least exponentially many items in the set $\big\{ \mathcal{S}' \:\big|\: \mathrm{ker}(I_k \:|\: \mathcal{S}') \in S_1, \mathcal{S}' \in \mathbb{F}_2^{nk} \big\}$.
+\begin{enumerate}
+	\item $n, k, \ell$ are linear in $\lambda$,
+	\item $0 < \ell < k < n$,
+	\item $\frac{k}{\ell} \leq \frac{n}{k}$,
+	\item $k \ell > 2$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+Let $\mathcal{M} = \{ M \}$ denote the set of all $k \times (n+k)$ matrices whose
+\begin{enumerate}
+	\item first $k$ columns are linearly independent;
+	\item kernels are in $S_1$.
+\end{enumerate}
+(Notice that the first condition is equivalent to requiring that all $M$s in $\mathcal{M}$ row reduce to $I_k \:|\: \mathcal{S}'$, for some $\mathcal{S}'$.)
+
+Recall how we generated $S_1$: we set $S_0$ to be the kernel of a matrix $I_k \:|\: \mathcal{S}$, and chose $S_1$ to be a random subspace which contained $S_0$. As such, $S_1^\perp \subset \mathrm{rowspan}(I_k \:|\: \mathcal{S})$. In other words, some linear combination of the rows of $(I_k \:|\: \mathcal{S})$ constitutes a basis for $S_1^\perp$.
+
+The rows of $(I_k \:|\: \mathcal{S})$ are of the form $(e_i, s_i)$ for $i$ in $1, \ldots, k$, where each $e_i$ is a standard basis vector that is $k$ bits long, and each $s_i$ is a random secret in $\mathbb{F}_2^n$. Suppose that $B = \big\{ (l_j, r_j) \:\big|\: l_j \in \mathbb{F}_2^k, r_j \in \mathbb{F}_2^n; j \in 1, \ldots, k - \ell \big\}$ is a basis for $S_1^\perp$, where each basis vector $(l_j, r_j)$ is a linear combination of rows of $(I_k \:|\: \mathcal{S})$.
+
+\begin{lemma}
+\label{lemma:linind}
+If the set $B$ is linearly independent, then the set of all $l_j, j \in 1, \ldots, k - \ell$, is linearly independent.
+\end{lemma}
+\begin{proof}
+We prove the contrapositive: if there is some $l_{j^*}$ that is a linear combination of $l_{j_1}, \ldots, l_{j_p}$, then $(l_{j^*}, r_{j^*}) = (l_{j_1}, r_{j_1}) \oplus \cdots \oplus (l_{j_p}, r_{j_p})$.
+
+Suppose such an $l_{j^*}$ exists. Then $r_{j^*}$ will have the following form:
+\begin{align}
+r_{j^*} = (l_{j_1} \oplus \cdots \oplus l_{j_p})_1 \cdot s_1 \oplus \cdots \oplus (l_{j_1} \oplus \cdots \oplus l_{j_p})_k \cdot s_k.
+\end{align}
+(Here, $(l_{j_1} \oplus \cdots \oplus l_{j_p})_1$ denotes the first bit of $l_{j_1} \oplus \cdots \oplus l_{j_p}$.)
+
+Expanding, we have that
+\begin{align}
+r_{j^*} &= \big( (l_{j_1})_1 \oplus \cdots \oplus (l_{j_p})_1 \big) \cdot s_1 \oplus \cdots \oplus \big( (l_{j_1})_k \oplus \cdots \oplus (l_{j_p})_k \big) \cdot s_k \\
+\begin{split}
+&= (l_{j_1})_1 \cdot s_1 \oplus (l_{j_1})_2 \cdot s_2 \oplus \cdots \oplus (l_{j_1})_k \cdot s_k \\
+&\quad \: \oplus \\
+&\quad \quad \vdots \\
+&\quad \: \oplus \\
+&\quad \: (l_{j_p})_1 \cdot s_1 \oplus (l_{j_p})_2 \cdot s_2 \oplus \cdots \oplus (l_{j_p})_k \cdot s_k \\
+\end{split} \\
+&= r_{j_1} \oplus \cdots \oplus r_{j_p}.
+\end{align}
+
+As such, $(l_{j^*}, r_{j^*}) = (l_{j_1}, r_{j_1}) \oplus \cdots \oplus (l_{j_p}, r_{j_p})$. The lemma is thus proved.
+\end{proof}
+
+Recall that $B$ is the basis which we choose for $S_1^\perp$ from the rows of $(I_k \:|\: \mathcal{S})$. Suppose we write $B$ as a matrix $M'$ by using the elements of $B$ as the rows of $M'$. If we write $M'$ as a block matrix $(L' \:|\: R')$, where $L$ is a $(k - \ell) \times k$ matrix and $R$ is a $(k - \ell) \times n$ matrix, then we know by \cref{lemma:linind} that $L'$ will be full-rank.
+
+To extend $M'$ to a matrix $M \in \mathcal{M}$, we fill the remaining $\ell$ rows uniformly at random. Notice that, if we write $M$ as a block matrix $(L \:|\: R)$, where $L$ is $k \times k$ and $R$ is $k \times n$, $M$ will be in $\mathcal{M}$ if and only if $L$ is full-rank. The chances that the last $\ell$ random vectors in $L$ will be linearly independent of the first $k - \ell$ which we chose earlier (in the form of $L'$) can be expressed in the following manner:
+\begin{align}
+&\frac{1}{2^{k\ell}} \prod_{i = k - \ell + 1}^k (2^k - 2^{i-1}) \\
+&= \prod_{i = k - \ell + 1}^k (1 - \big(\frac{1}{2}\big)^{k+1-i}) \\
+&= \prod_{i = 1}^\ell (1 - \big(\frac{1}{2}\big)^{2k-\ell+1-i}) \\
+&\geq \prod_{i = 1}^\ell (1 - \big(\frac{1}{2}\big)^{\ell+1-i}) \label{eq:convergent}
+\end{align}
+It is known that \cref{eq:convergent} converges to a constant $> \frac{1}{4}$ as $\ell \rightarrow \infty$; as such, \cref{eq:convergent} is bounded below by $\frac{1}{4}$ (and above by 1). There are $2^{\ell(n+k)}$ different ways to fill the last $\ell$ rows of $M$, and $> \frac{1}{4}$ of these will result in an $M$ whose first $k$ columns are linearly independent. Therefore, the set $\mathcal{M}$ (of $M$s whose first $k$ columns are linearly independent, and whose kernels are in $S_1$) must contain at least $2^{\ell(n+k) - 2}$ elements.
+
+Denote the reduced row echelon form of $M \in \mathcal{M}$ by $\hat M$. Note that there is a bijection between the set of all $\hat M$s and the set $\big\{ \mathcal{S}' \:\big|\: \mathrm{ker}(I_k \:|\: \mathcal{S}') \in S_1, \mathcal{S}' \in \mathbb{F}_2^{nk} \big\}$. The map from $M$ to RREF($M$) is many-to-one, but, for any given $\hat M$, the maximum number of matrices $M$ which row reduce to $\hat M$ is given by
+\begin{align}
+	(2^k - 1)\cdots(2^k - 2^{k-1}) \leq 2^{k^2}. \label{eq:basiscounting}
+\end{align}
+
+The left-hand-side of \cref{eq:basiscounting} is an expression for the number of ways one can choose a basis for a $k$-dimensional space over $\mathbb{F}_2$. Since matrices which have the same RREF always have the same kernel, their rows can be interpreted as different choices of basis for the perp space of that kernel.
+
+Given \cref{eq:basiscounting}, and that there are at least $2^{\ell(n+k) - 2}$ $M$s, the number of $\hat M$s must be at least $2^{\ell(n+k) - k^2 - 2}$. For any choice of $n, k, \ell$ such that
+\begin{enumerate}
+	\item $n, k, \ell$ are linear in $\lambda$,
+	\item $0 < \ell < k < n$,
+	\item $\frac{k}{\ell} \leq \frac{n}{k}$,
+	\item $k \ell > 2$.
+\end{enumerate}
+the set of all $\hat M$s will contain exponentially many elements. Since there is a bijection between the set of all $\hat M$s and the set $\big\{ \mathcal{S}' \:\big|\: \mathrm{ker}(I_k \:|\: \mathcal{S}') \in S_1, \mathcal{S}' \in \mathbb{F}_2^{nk} \big\}$, \cref{lemma:expmany} is true.
+\end{proof}
+
+By the $\textsf{DLWE}(\mathcal{D})$ assumption, where $\mathcal{D}$ is the uniform distribution over the set $\{L(\mathcal{S}'^T) \:|\: \mathcal{S}' \leftarrow C\}$, no adversary can tell the difference between the samples $A\big( L(s_i) \big) + e_i$ and $k$ random strings. Suppose there were an adversary $A$ who could. We enlist $A$ to build an adversary $B$ who breaks $\textsf{DLWE}(\mathcal{D})$. $B$ receives a random LWE sample $\Big(A, A\big( L(\mathcal{S}'^T) \big) + E \Big)$, where $A$ is an $m \times n$ matrix, $L(\mathcal{S}'^T)$ is an $n \times k$ matrix, and $E$ is an $m \times k$ matrix; $B$ also knows the distribution $\mathcal{D}$, which means that it knows $S_1$ and can provide $A$ with a description of it. Notice that the columns of $B$'s sample constitute $k$ vectors of the form $A\big( L(s_i) \big) + e_i$. Therefore, $B$ gives its sample to $A$ column-wise, and outputs whatever $A$ outputs. If $A$ can distinguish between $H_3$ and $H_2$, then $B$ can break $\textsf{DLWE}(\mathcal{D})$. We conclude that $H_3$ and $H_2$ are indistinguishable.
+	\item $H_4$: The challenger simply outputs $S_1$. It is impossible to recover $\mathrm{span}(s_1, \ldots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
+\end{itemize}
+\end{proof}
+
+\begin{comment}
 	  Let $C$ be the following probabilistic algorithm:
     \begin{enumerate}
         \item Choose a uniformly random $k \times (n+k)$ matrix $M$ whose kernel is in $S_1$. Put $M$ in reduced row echelon form. Denote the row-reduced version of $M$ by $\hat M$.
 			\item If the first $k$ columns of $\hat M$ are the $k$-dimensional identity matrix, continue. Otherwise, repeat step 1.
-\begin{comment}
+
 On average (for large $k$), at least 1 in every 4 of such randomly chosen $M$ will have the property that its first $k$ columns are linearly independent.\footnote{This is because the product $\prod_{i=1}^k \big(1-(\frac{1}{2})^{k+1-i}\big)$, which represents the probability that $k$ randomly chosen vectors in $\mathbb{F}_2^k$ will be linearly independent, is known to converge to a constant $ > \frac{1}{4}$ as $k \rightarrow \infty$.} Repeat the choosing procedure until an $M$ with this property is found.
-\end{comment}
+
         \item If $\hat M$ made it past step 2, then it has the form $I_k \:|\: \mathcal{S}'$ for some $k \times n$ matrix $\mathcal{S}'$. Output $\mathcal{S}'$.
     \end{enumerate}
 
@@ -349,17 +483,8 @@ For each $\hat M = I_k \:|\: \mathcal{S}'$, the maximum number of matrices $M$ (
 
 The left-hand-side is an expression for the number of ways one can choose a basis for a $k$-dimensional space over $\mathbb{F}_2$. Since matrices which have the same RREF always have the same kernel, their rows can be interpreted as different choices of basis for the perp space of that kernel.
 
-We prove the following lemma in order to show that the output of $C$ has sufficient min-entropy to serve as the distribution $\mathcal{D}$ in the \textsf{DLWE}($\mathcal{D}$) problem.
-
-\begin{lemma}
-Let $S_1$ be $(n+k - \ell)$ dimensional, where $0 < \ell < k$. Under certain conditions on $n$, $k$ and $\ell$, there are at least exponentially many matrices $M$ which the first step of $C$ could sample.
-\end{lemma}
-
 Note that, in step 1, $C$ effectively samples at random from the uniform distribution over all dimension-$n$ subspaces contained in $S_1$. (There is a bijection between these subspaces and the $\hat M$s, because a single matrix cannot have two kernels, and two matrices in reduced row echelon form have the same kernel if and only if they are the same matrix.) We argue that the effect of the second step is to eliminate about $\frac{3}{4}$ of these $n$-dimensional subspaces from consideration, leaving behind a uniform distribution over those subspaces which remain.
-
-By the $\textsf{DLWE}(\mathcal{D})$ assumption, where $\mathcal{D}$ is the uniform distribution over the set $\{L(\mathcal{S}'^T) \:|\: \mathcal{S}' \leftarrow C(S_1)\}$, no adversary can tell the difference between the samples $A\big( L(s_i) \big) + e_i$ and $k$ random strings. Suppose there were an adversary $A$ who could. We enlist $A$ to build an adversary $B$ who breaks $\textsf{DLWE}(\mathcal{D})$. $B$ receives a random LWE sample $\Big(A, A\big( L(\mathcal{S}'^T) \big) + E \Big)$, where $A$ is an $m \times n$ matrix, $L(\mathcal{S}'^T)$ is an $n \times k$ matrix, and $E$ is an $m \times k$ matrix; $B$ also knows the distribution $\mathcal{D}$, which means that it knows $S_1$ and can provide $A$ with a description of it. Notice that the columns of $B$'s sample constitute $k$ vectors of the form $A\big( L(s_i) \big) + e_i$. Therefore, $B$ gives its sample to $A$ column-wise, and outputs whatever $A$ outputs. If $A$ can distinguish between $H_3$ and $H_2$, then $B$ can break $\textsf{DLWE}(\mathcal{D})$. We conclude that $H_3$ and $H_2$ are indistinguishable.
-	\item $H_4$: The challenger simply outputs $S_1$. It is impossible to recover $\mathrm{span}(s_1, \cdots, s_k)$---or any member of that subspace---with non-negligible probability from only $S_1$, provided that the dimension gap $d_1 - d_0$ (where $d_1$ is the dimension of $S_1$, and $d_0$ is the dimension of $S_0$) is linear in $n$: there are exponentially many equally probable possibilities, and the adversary has no way of distinguishing between them. This completes our proof that $F$ is collision resistant.
-\end{itemize}
+\end{comment}
 
 \bibliographystyle{alpha}
 \bibliography{bibliography}
