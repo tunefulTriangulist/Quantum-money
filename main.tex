@@ -189,7 +189,7 @@ Let $k, n, m$ be positive integers linear in $\lambda$, with $k < n < m$. Let $q
 			\item $B_V < B_P$;
 			\item the ratio $\frac{B_P}{B_V}$ is superpolynomial in $\lambda$.
 		\end{itemize}
-		We require $q$ to be large enough so that $2\sqrt{n} < B_V < B_P$.
+		We require $q$ to be large enough such that $2\sqrt{n} < B_V < B_P$.
 \end{itemize}
 
 Let $L$ be a map from $\mathbb{F}_2$ to $\mathbb{Z}_q$ such that
@@ -371,7 +371,9 @@ Note that, if an adversary can recover $\big( (b, x, e), (b', x', e') \big)$ suc
     \item $H_2$: The challenger gives out a full description of $S_1$, instead of a membership program. Any adversary who can break collision resistance in $H_1$ can also do so in $H_2$.
     \item $H_3$: The challenger outputs $k$ uniformly random strings instead of the samples $A\big( L(s_i) \big) + e_i$. It also outputs $S_1$ and $A$ as before.
 
-We show that this hybrid and the last are indistinguishable by reducing the problem of telling them apart to the problem of decisional LWE with secrets drawn from any distribution $\mathcal{D}$ that has sufficient entropy (\cite{robustness}). Following \cite{robustness}, we denote this problem by \textsf{DLWE}($\mathcal{D}$).
+We show that this hybrid and the last are indistinguishable by reducing the problem of telling them apart to the problem of decisional LWE with secrets drawn from any distribution $\mathcal{D}$ that has sufficient entropy (\cite{robustness}). Following \cite{robustness}, we denote this problem by \textsf{DLWE}($\mathcal{D}$). The \textsf{DLWE}($\mathcal{D}$) assumption states that:
+
+
 
 Let $C$ be the uniform distribution over the set $\big\{ \mathcal{S}' \:\big|\: \mathrm{ker}(I_k \:|\: \mathcal{S}') \in S_1, \mathcal{S}' \in \mathbb{F}_2^{nk} \big\}$. We prove \cref{lemma:expmany} in order to show that $C$ has sufficient min-entropy to serve as the distribution $\mathcal{D}$ in the \textsf{DLWE}($\mathcal{D}$) problem.
 
